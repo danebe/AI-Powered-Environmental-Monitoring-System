@@ -1,7 +1,6 @@
 #pragma once
-
-#include "config.h"
-#include "types.h"
+#include "../../types.h"
+#include "../../config.h"
 
 class LocalFusionEngine {
 public:
@@ -9,13 +8,15 @@ public:
     HazardScores evaluate(const SensorReadings& r);
 
 private:
-    float computeFloodRisk(const SensorReadings& r, char* reason_out, size_t max_len);
-    float computeFireRisk(const SensorReadings& r, char* reason_out, size_t max_len);
-    float computePollutionRisk(const SensorReadings& r, char* reason_out, size_t max_len);
-
     HazardSeverity scoreToSeverity(float score);
 
-    // Persistence counters for transient noise rejection
-    uint8_t _consecutive_fire_spikes;
-    uint8_t _consecutive_pollution_spikes;
+    float computeFloodRisk(const SensorReadings& r, char* out, size_t n);
+    float computeFireRisk(const SensorReadings& r, char* out, size_t n);
+    float computePollutionRisk(const SensorReadings& r, char* out, size_t n);
+    float computeHeatRisk(const SensorReadings& r, char* out, size_t n);
+    float computeLandslideRisk(const SensorReadings& r, char* out, size_t n);
+
+    int _consecutive_fire_spikes;
+    int _consecutive_pollution_spikes;
+    int _consecutive_landslide_spikes;
 };

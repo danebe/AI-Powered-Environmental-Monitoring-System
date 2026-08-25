@@ -1,12 +1,11 @@
 """
-SIH 2026 Environmental Monitoring Network
+Environmental Intelligence Network
 Storage Layer: SQLite Database and Fast In-Memory Cache
 """
 
 import sqlite3
 import json
 import time
-import os
 from typing import Dict, Any, List, Optional
 from .schemas import TelemetryPayload, HazardScoreBreakdown, AlertEvent
 
@@ -20,7 +19,6 @@ class StorageManager:
     def __init__(self, db_path: str = "environmental_network.db"):
         self.db_path = db_path
         self._init_db()
-        # In-memory fast cache: list of recent data per node
         self.recent_telemetry: Dict[str, List[Dict[str, Any]]] = {
             "NODE_001": [],
             "NODE_002": [],
@@ -48,12 +46,19 @@ class StorageManager:
                 rain_raw INTEGER,
                 water_level_cm REAL,
                 water_rate_of_rise REAL,
+                soil_moisture_pct REAL,
+                vibration_hits INTEGER,
+                water_ph REAL,
+                water_turbidity_ntu REAL,
                 flame_detected INTEGER,
-                battery_voltage REAL,
                 signal_strength INTEGER,
                 flood_score REAL,
                 fire_score REAL,
                 pollution_score REAL,
+                heat_score REAL,
+                landslide_score REAL,
+                industrial_score REAL,
+                water_quality_score REAL,
                 highest_severity TEXT,
                 payload_json TEXT
             )
@@ -72,12 +77,12 @@ class StorageManager:
                 title TEXT,
                 reasons_json TEXT,
                 sensor_evidence_json TEXT,
+                notification_tier TEXT DEFAULT 'CITIZEN',
                 acknowledged INTEGER DEFAULT 0,
                 acknowledged_by TEXT
             )
         """)
 
-        # Indexes for fast historical range queries
         cur.execute("CREATE INDEX IF NOT EXISTS idx_telemetry_node_time ON telemetry(node_id, timestamp)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_alerts_time ON alerts(timestamp)")
 
@@ -102,9 +107,12 @@ class StorageManager:
                 INSERT INTO telemetry (
                     node_id, timestamp, timestamp_iso, temperature, humidity, pressure,
                     gas_resistance, mq2_raw, mq7_raw, rain_raw, water_level_cm,
-                    water_rate_of_rise, flame_detected, battery_voltage, signal_strength,
-                    flood_score, fire_score, pollution_score, highest_severity, payload_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    water_rate_of_rise, soil_moisture_pct, vibration_hits, water_ph,
+                    water_turbidity_ntu, flame_detected, signal_strength,
+                    flood_score, fire_score, pollution_score, heat_score,
+                    landslide_score, industrial_score, water_quality_score,
+                    highest_severity, payload_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 payload.node_id,
                 payload.timestamp,
@@ -118,12 +126,19 @@ class StorageManager:
                 payload.rain_raw,
                 payload.water_level_cm,
                 payload.water_rate_of_rise_cm_min,
+                payload.soil_moisture_pct,
+                payload.vibration_hits,
+                payload.water_ph,
+                payload.water_turbidity_ntu,
                 1 if payload.flame_detected else 0,
-                payload.battery_voltage,
                 payload.signal_strength,
                 scores.flood_score,
                 scores.fire_score,
                 scores.pollution_score,
+                scores.heat_score,
+                scores.landslide_score,
+                scores.industrial_score,
+                scores.water_quality_score,
                 scores.highest_severity,
                 json.dumps(data)
             ))
@@ -140,8 +155,8 @@ class StorageManager:
                 INSERT OR REPLACE INTO alerts (
                     event_id, node_id, hazard_type, severity, score, timestamp,
                     timestamp_iso, title, reasons_json, sensor_evidence_json,
-                    acknowledged, acknowledged_by
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    notification_tier, acknowledged, acknowledged_by
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 alert.event_id,
                 alert.node_id,
@@ -153,6 +168,7 @@ class StorageManager:
                 alert.title,
                 json.dumps(alert.reasons),
                 json.dumps(alert.sensor_evidence),
+                alert.notification_tier,
                 1 if alert.acknowledged else 0,
                 alert.acknowledged_by
             ))
@@ -166,3 +182,50 @@ class StorageManager:
         if cached:
             return cached[-limit:]
         return []
+
+    def get_trend_analysis(self, node_id: str, hours: int = 24) -> Dict[str, Any]:
+        """
+        Computes hourly aggregate trends for long-term cloud analysis.
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cur = conn.cursor()
+            cutoff = time.time() - (hours * 3600)
+            cur.execute("""
+                SELECT
+                    AVG(temperature), MAX(temperature), MIN(temperature),
+                    AVG(humidity), AVG(water_level_cm), MAX(water_level_cm),
+                    AVG(soil_moisture_pct), MAX(vibration_hits),
+                    AVG(flood_score), AVG(fire_score), AVG(pollution_score),
+                    AVG(heat_score), AVG(landslide_score), AVG(industrial_score),
+                    AVG(water_quality_score), COUNT(*)
+                FROM telemetry
+                WHERE node_id = ? AND timestamp >= ?
+            """, (node_id, cutoff))
+            row = cur.fetchone()
+            conn.close()
+
+            if row and row[15] and row[15] > 0:
+                return {
+                    "node_id": node_id,
+                    "hours": hours,
+                    "sample_count": row[15],
+                    "temperature": {"avg": round(row[0] or 0, 1), "max": round(row[1] or 0, 1), "min": round(row[2] or 0, 1)},
+                    "humidity_avg": round(row[3] or 0, 1),
+                    "water_level": {"avg": round(row[4] or 0, 1), "max": round(row[5] or 0, 1)},
+                    "soil_moisture_avg": round(row[6] or 0, 1),
+                    "max_vibration_hits": row[7] or 0,
+                    "avg_hazard_scores": {
+                        "flood": round(row[8] or 0, 1),
+                        "fire": round(row[9] or 0, 1),
+                        "pollution": round(row[10] or 0, 1),
+                        "heat": round(row[11] or 0, 1),
+                        "landslide": round(row[12] or 0, 1),
+                        "industrial": round(row[13] or 0, 1),
+                        "water_quality": round(row[14] or 0, 1),
+                    }
+                }
+        except Exception as e:
+            print(f"[DB Error] get_trend_analysis: {e}")
+
+        return {"node_id": node_id, "hours": hours, "sample_count": 0, "message": "No historical data in time window"}
