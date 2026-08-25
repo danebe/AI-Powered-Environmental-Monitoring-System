@@ -1,5 +1,5 @@
 """
-SIH 2026 Environmental Monitoring Network - Unit Tests
+Environmental Intelligence Network - Unit Tests
 Multi-Node Management & Health Tracker Tests
 """
 
@@ -27,11 +27,17 @@ class TestNodeManager(unittest.TestCase):
         self.assertIn("NODE_003", node_ids)
         self.assertIn("NODE_004", node_ids)
 
+        # Check zone types
+        zones = {n["node_id"]: n["zone_type"] for n in nodes}
+        self.assertEqual(zones["NODE_001"], "INDUSTRIAL")
+        self.assertEqual(zones["NODE_002"], "FOREST")
+        self.assertEqual(zones["NODE_003"], "RIVER")
+        self.assertEqual(zones["NODE_004"], "AGRICULTURAL")
+
     def test_node_heartbeat_and_timeout(self):
         payload = TelemetryPayload(
             node_id="NODE_001",
             timestamp=1000.0,
-            battery_voltage=3.85,
             signal_strength=-60
         )
         scores = HazardScoreBreakdown(highest_score=15.0, highest_severity="NORMAL")
@@ -40,7 +46,7 @@ class TestNodeManager(unittest.TestCase):
         # Fresh check
         node = self.mgr.get_node("NODE_001")
         self.assertEqual(node["status"], "ONLINE")
-        self.assertEqual(node["battery_voltage"], 3.85)
+        self.assertEqual(node["signal_strength"], -60)
 
         # Timeout after 16 seconds
         self.mgr.check_health_states(now=1016.0)

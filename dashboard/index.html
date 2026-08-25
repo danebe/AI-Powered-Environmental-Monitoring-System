@@ -3,31 +3,35 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Environmental Monitoring Command Center</title>
-  <meta name="description" content="AI-assisted low-cost environmental monitoring command center for flood, wildfire, and pollution detection." />
+  <title>Environmental Intelligence Network — Command Center</title>
+  <meta name="description" content="Distributed edge AI environmental monitoring and multi-hazard early warning network." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body class="theme-light">
 
-  <!-- Authentication Login Modal Screen -->
+  <!-- Authentication Login Modal -->
   <div id="login-modal" class="login-overlay">
     <div class="login-card">
       <div class="login-header">
         <div class="login-logo-icon">🛡️</div>
         <h2>SYSTEM ACCESS CONTROL</h2>
-        <p>Authorized Personnel Only • Environmental Monitoring Network</p>
+        <p>Environmental Intelligence Network • Control Room</p>
       </div>
       <form id="login-form" class="login-form">
         <div class="form-group">
           <label for="input-username">OPERATOR ID</label>
-          <input type="text" id="input-username" placeholder="Enter username (e.g. admin)" required autocomplete="username" />
+          <input type="text" id="input-username" placeholder="admin" required autocomplete="username" />
         </div>
         <div class="form-group">
           <label for="input-password">SECURITY KEY</label>
-          <input type="password" id="input-password" placeholder="Enter password (e.g. admin123)" required autocomplete="current-password" />
+          <input type="password" id="input-password" placeholder="admin123" required autocomplete="current-password" />
         </div>
         <div id="login-error" class="login-error hidden">Invalid credentials. Default: admin / admin123</div>
         <button type="submit" class="login-submit-btn">AUTHENTICATE & ENTER</button>
@@ -36,7 +40,7 @@
     </div>
   </div>
 
-  <!-- Emergency Alert Banner (Appears dynamically during Critical Hazards) -->
+  <!-- Emergency Alert Banner -->
   <div id="emergency-banner" class="emergency-banner hidden" role="alert">
     <div class="emergency-content">
       <div class="emergency-icon">⚠️</div>
@@ -55,33 +59,32 @@
   <header class="command-header" id="command-header">
     <div class="header-brand">
       <div>
-        <h1 class="brand-title">ENVIRONMENTAL MONITORING COMMAND CENTER</h1>
-        <div class="brand-subtitle">EDGE SENSOR FUSION • LOCALIZED INTELLIGENCE • EARLY HAZARD DETECTION</div>
+        <h1 class="brand-title">ENVIRONMENTAL INTELLIGENCE NETWORK</h1>
+        <div class="brand-subtitle">DISTRIBUTED EDGE SENSOR NODES • LOCAL AI INFERENCE • MULTI-HAZARD EARLY WARNING</div>
       </div>
     </div>
 
     <div class="header-metrics">
-
-      <!-- Theme Selector (Default: Light Mode) -->
-      <div class="theme-selector" title="Switch interface display mode">
-        <button class="theme-btn active" data-theme="light" id="btn-theme-light">☀️ Light</button>
-        <button class="theme-btn" data-theme="dark" id="btn-theme-dark">🌙 Dark</button>
-        <button class="theme-btn" data-theme="black" id="btn-theme-black">⬛ OLED</button>
+      <!-- Tiny Compact 3-Way Theme Toggle -->
+      <div class="tiny-theme-toggle" title="Switch Display Mode">
+        <button class="tiny-theme-btn active" data-theme="light" id="btn-theme-light" title="Light Mode">☀️</button>
+        <button class="tiny-theme-btn" data-theme="dark" id="btn-theme-dark" title="Dark Mode">🌙</button>
+        <button class="tiny-theme-btn" data-theme="black" id="btn-theme-black" title="OLED Black Mode">⬛</button>
       </div>
 
-      <!-- Single Clear Master Alarm On/Off Button -->
-      <button class="alarm-master-btn active" id="btn-alarm-toggle" title="Master Emergency Alarm On/Off">
+      <!-- Master Alarm Button -->
+      <button class="alarm-master-btn active" id="btn-alarm-toggle" title="Emergency Siren Sound On/Off">
         <span id="alarm-icon">🚨</span>
         <span id="alarm-text">ALARM: ON</span>
       </button>
 
       <!-- Network Status -->
       <div class="metric-pill" id="pill-conn">
-        <span class="label">NET</span>
+        <span class="label">LINK</span>
         <span class="value" id="stat-conn-status"><span class="live-pulse"></span> LIVE SSE</span>
       </div>
 
-      <!-- Nodes Online -->
+      <!-- Online Nodes -->
       <div class="metric-pill" id="pill-nodes">
         <span class="label">NODES</span>
         <span class="value"><span id="stat-online-nodes">4</span> / <span id="stat-total-nodes">4</span></span>
@@ -89,17 +92,17 @@
 
       <!-- Active Alerts -->
       <div class="metric-pill healthy" id="pill-alerts">
-        <span class="label">ACTIVE ALERTS</span>
+        <span class="label">ALERTS</span>
         <span class="value" id="stat-active-alerts">0</span>
       </div>
 
-      <!-- System Peak Risk -->
+      <!-- Peak Risk Index -->
       <div class="metric-pill healthy" id="pill-hazard">
         <span class="label">PEAK RISK</span>
         <span class="value" id="stat-max-hazard">NONE (0)</span>
       </div>
 
-      <!-- Operator & Logout -->
+      <!-- Operator Info -->
       <div class="metric-pill user-pill" id="pill-user">
         <span class="label">USER</span>
         <span class="value" id="stat-user-name">Operator</span>
@@ -117,14 +120,14 @@
   <!-- 3-Column Dashboard Layout -->
   <main class="dashboard-grid">
 
-    <!-- Column 1: Nodes, Hazard Risk Matrix, Hardware OLED Mirror -->
+    <!-- Column 1: Nodes, 7 Hazard Cards, OLED Mirror -->
     <section class="col-left" aria-label="Nodes and Risk Matrix">
 
       <!-- Node Selection Tabs -->
       <div class="panel" id="panel-node-selector">
         <div class="panel-header">
           <span class="panel-title">📡 Monitoring Nodes</span>
-          <span class="panel-badge">ESP32 MESH</span>
+          <span class="panel-badge">4 ZONES</span>
         </div>
         <div class="panel-body">
           <div class="node-list" id="node-list-container">
@@ -133,95 +136,132 @@
         </div>
       </div>
 
-      <!-- Hazard Scoring Matrix (0-100) -->
+      <!-- 7 Hazard Scoring Matrix (0-100) -->
       <div class="panel" id="panel-hazard-matrix">
         <div class="panel-header">
-          <span class="panel-title">⚠️ Multi-Sensor Risk Intelligence</span>
-          <span class="panel-badge">0-100 INDEX</span>
+          <span class="panel-title">⚠️ Multi-Hazard Early Warning Index</span>
+          <span class="panel-badge">0-100 SCALE</span>
         </div>
         <div class="panel-body">
+          <div class="hazard-card-list">
 
-          <!-- Flood Risk Card -->
-          <div class="hazard-card" id="card-flood">
-            <div class="hazard-header">
-              <div class="hazard-title">
-                <span class="hazard-emoji">🌊</span>
-                <span>Flood Hazard</span>
+            <!-- 1. Flood Risk -->
+            <div class="hazard-card" id="card-flood">
+              <div class="hazard-header">
+                <div class="hazard-title"><span>🌊</span><span>Flood Hazard</span></div>
+                <div class="hazard-score-wrap">
+                  <span class="hazard-score-val" id="score-flood-val">0</span>
+                  <span class="hazard-score-scale">/100</span>
+                  <span class="severity-badge sev-NORMAL" id="badge-flood">[NORMAL]</span>
+                </div>
               </div>
-              <div class="hazard-score-wrap">
-                <span class="hazard-score-val" id="score-flood-val">0</span>
-                <span class="hazard-score-scale">/100</span>
-                <span class="severity-badge sev-NORMAL" id="badge-flood">[✓ NORMAL]</span>
+              <div class="gauge-bar-bg"><div class="gauge-bar-fill" id="fill-flood"></div></div>
+              <div class="hazard-factors" id="factors-flood">• Drainage channel within safe capacity</div>
+            </div>
+
+            <!-- 2. Fire Risk -->
+            <div class="hazard-card" id="card-fire">
+              <div class="hazard-header">
+                <div class="hazard-title"><span>🔥</span><span>Wildfire / Fire</span></div>
+                <div class="hazard-score-wrap">
+                  <span class="hazard-score-val" id="score-fire-val">0</span>
+                  <span class="hazard-score-scale">/100</span>
+                  <span class="severity-badge sev-NORMAL" id="badge-fire">[NORMAL]</span>
+                </div>
               </div>
+              <div class="gauge-bar-bg"><div class="gauge-bar-fill" id="fill-fire"></div></div>
+              <div class="hazard-factors" id="factors-fire">• Thermal and combustion sensors nominal</div>
             </div>
-            <div class="gauge-bar-bg">
-              <div class="gauge-bar-fill" id="fill-flood"></div>
+
+            <!-- 3. Air Pollution -->
+            <div class="hazard-card" id="card-pollution">
+              <div class="hazard-header">
+                <div class="hazard-title"><span>☣️</span><span>Hazardous Air Pollution</span></div>
+                <div class="hazard-score-wrap">
+                  <span class="hazard-score-val" id="score-pollution-val">0</span>
+                  <span class="hazard-score-scale">/100</span>
+                  <span class="severity-badge sev-NORMAL" id="badge-pollution">[NORMAL]</span>
+                </div>
+              </div>
+              <div class="gauge-bar-bg"><div class="gauge-bar-fill" id="fill-pollution"></div></div>
+              <div class="hazard-factors" id="factors-pollution">• Clean atmospheric VOC / CO baseline</div>
             </div>
-            <div class="hazard-factors" id="factors-flood">
-              <div class="factor-item"><span class="factor-name">• Drainage channel flow within nominal capacity</span></div>
+
+            <!-- 4. Extreme Heat -->
+            <div class="hazard-card" id="card-heat">
+              <div class="hazard-header">
+                <div class="hazard-title"><span>🌡️</span><span>Extreme Heat</span></div>
+                <div class="hazard-score-wrap">
+                  <span class="hazard-score-val" id="score-heat-val">0</span>
+                  <span class="hazard-score-scale">/100</span>
+                  <span class="severity-badge sev-NORMAL" id="badge-heat">[NORMAL]</span>
+                </div>
+              </div>
+              <div class="gauge-bar-bg"><div class="gauge-bar-fill" id="fill-heat"></div></div>
+              <div class="hazard-factors" id="factors-heat">• Ambient temperature within normal limits</div>
             </div>
+
+            <!-- 5. Landslide Precursor -->
+            <div class="hazard-card" id="card-landslide">
+              <div class="hazard-header">
+                <div class="hazard-title"><span>⛰️</span><span>Landslide Precursor</span></div>
+                <div class="hazard-score-wrap">
+                  <span class="hazard-score-val" id="score-landslide-val">0</span>
+                  <span class="hazard-score-scale">/100</span>
+                  <span class="severity-badge sev-NORMAL" id="badge-landslide">[NORMAL]</span>
+                </div>
+              </div>
+              <div class="gauge-bar-bg"><div class="gauge-bar-fill" id="fill-landslide"></div></div>
+              <div class="hazard-factors" id="factors-landslide">• Soil moisture and ground stability normal</div>
+            </div>
+
+            <!-- 6. Industrial Chemical Emissions -->
+            <div class="hazard-card" id="card-industrial">
+              <div class="hazard-header">
+                <div class="hazard-title"><span>🏭</span><span>Industrial Emissions / Leaks</span></div>
+                <div class="hazard-score-wrap">
+                  <span class="hazard-score-val" id="score-industrial-val">0</span>
+                  <span class="hazard-score-scale">/100</span>
+                  <span class="severity-badge sev-NORMAL" id="badge-industrial">[NORMAL]</span>
+                </div>
+              </div>
+              <div class="gauge-bar-bg"><div class="gauge-bar-fill" id="fill-industrial"></div></div>
+              <div class="hazard-factors" id="factors-industrial">• No industrial solvent or gas leaks detected</div>
+            </div>
+
+            <!-- 7. Water Quality Degradation -->
+            <div class="hazard-card" id="card-water-quality">
+              <div class="hazard-header">
+                <div class="hazard-title"><span>💧</span><span>Water Quality Degradation</span></div>
+                <div class="hazard-score-wrap">
+                  <span class="hazard-score-val" id="score-water-quality-val">0</span>
+                  <span class="hazard-score-scale">/100</span>
+                  <span class="severity-badge sev-NORMAL" id="badge-water-quality">[NORMAL]</span>
+                </div>
+              </div>
+              <div class="gauge-bar-bg"><div class="gauge-bar-fill" id="fill-water-quality"></div></div>
+              <div class="hazard-factors" id="factors-water-quality">• Water pH and turbidity baseline nominal</div>
+            </div>
+
           </div>
-
-          <!-- Fire Risk Card -->
-          <div class="hazard-card" id="card-fire">
-            <div class="hazard-header">
-              <div class="hazard-title">
-                <span class="hazard-emoji">🔥</span>
-                <span>Wildfire / Combustion</span>
-              </div>
-              <div class="hazard-score-wrap">
-                <span class="hazard-score-val" id="score-fire-val">0</span>
-                <span class="hazard-score-scale">/100</span>
-                <span class="severity-badge sev-NORMAL" id="badge-fire">[✓ NORMAL]</span>
-              </div>
-            </div>
-            <div class="gauge-bar-bg">
-              <div class="gauge-bar-fill" id="fill-fire"></div>
-            </div>
-            <div class="hazard-factors" id="factors-fire">
-              <div class="factor-item"><span class="factor-name">• Thermal and combustion sensors clear</span></div>
-            </div>
-          </div>
-
-          <!-- Pollution Risk Card -->
-          <div class="hazard-card" id="card-pollution">
-            <div class="hazard-header">
-              <div class="hazard-title">
-                <span class="hazard-emoji">☣️</span>
-                <span>Air Quality / Toxins</span>
-              </div>
-              <div class="hazard-score-wrap">
-                <span class="hazard-score-val" id="score-pollution-val">0</span>
-                <span class="hazard-score-scale">/100</span>
-                <span class="severity-badge sev-NORMAL" id="badge-pollution">[✓ NORMAL]</span>
-              </div>
-            </div>
-            <div class="gauge-bar-bg">
-              <div class="gauge-bar-fill" id="fill-pollution"></div>
-            </div>
-            <div class="hazard-factors" id="factors-pollution">
-              <div class="factor-item"><span class="factor-name">• VOC and CO indices within clean atmospheric envelope</span></div>
-            </div>
-          </div>
-
         </div>
       </div>
 
       <!-- Virtual ESP32 Hardware OLED Mirror -->
       <div class="panel" id="panel-hardware-mirror">
         <div class="panel-header">
-          <span class="panel-title">🖥️ Physical Node Display Mirror</span>
-          <span class="panel-badge">SSD1306 OLED</span>
+          <span class="panel-title">🖥️ On-Device OLED & Actuators</span>
+          <span class="panel-badge">SSD1306 128x64</span>
         </div>
         <div class="panel-body">
           <div class="oled-container">
             <div class="oled-screen-header">
-              <span id="oled-title">[SSD1306 128x64] NODE_001</span>
-              <span id="oled-status">ENVIRONMENT NORMAL</span>
+              <span id="oled-title">NODE_001 [LOCAL AI]</span>
+              <span id="oled-status">ENV NORMAL</span>
             </div>
             <div class="oled-screen-lines" id="oled-lines">
               <div>T: 26.5 C  H: 62 %</div>
-              <div>P: 1013 hPa</div>
+              <div>P: 1013 hPa  Soil: 30%</div>
               <div>Flood: LOW (12)</div>
               <div>Fire:  LOW (8)</div>
             </div>
@@ -250,7 +290,6 @@
 
     </section>
 
-
     <!-- Column 2: Live Telemetry Grid & Real-Time Trend Charts -->
     <section class="col-center" aria-label="Live Telemetry and Time-Series Charts">
 
@@ -273,10 +312,7 @@
                 <span class="cell-value" id="tel-temp-val">26.5</span>
                 <span class="cell-unit">°C</span>
               </div>
-              <div class="cell-footer">
-                <span>BME680 / DHT22</span>
-                <span>Ambient Air</span>
-              </div>
+              <div class="cell-footer"><span>BME680 / DHT22</span><span>Ambient Air</span></div>
             </div>
 
             <!-- Humidity -->
@@ -289,13 +325,10 @@
                 <span class="cell-value" id="tel-hum-val">62</span>
                 <span class="cell-unit">% RH</span>
               </div>
-              <div class="cell-footer">
-                <span>Relative Humidity</span>
-                <span>Moisture Index</span>
-              </div>
+              <div class="cell-footer"><span>Relative Humidity</span><span>Moisture</span></div>
             </div>
 
-            <!-- Pressure -->
+            <!-- Barometric Pressure -->
             <div class="telemetry-cell">
               <div class="cell-header">
                 <span class="cell-label">PRESSURE</span>
@@ -305,10 +338,7 @@
                 <span class="cell-value" id="tel-pres-val">1013</span>
                 <span class="cell-unit">hPa</span>
               </div>
-              <div class="cell-footer">
-                <span>Barometric</span>
-                <span>Atmospheric</span>
-              </div>
+              <div class="cell-footer"><span>Barometric</span><span>Atmospheric</span></div>
             </div>
 
             <!-- Gas Resistance (BME680) -->
@@ -321,10 +351,7 @@
                 <span class="cell-value" id="tel-gasres-val">120.0</span>
                 <span class="cell-unit">kΩ</span>
               </div>
-              <div class="cell-footer">
-                <span>BME680 Gas VOC</span>
-                <span>High = Cleaner</span>
-              </div>
+              <div class="cell-footer"><span>BME680 Gas VOC</span><span>High = Clean</span></div>
             </div>
 
             <!-- MQ-2 Smoke -->
@@ -337,10 +364,7 @@
                 <span class="cell-value" id="tel-mq2-val">320</span>
                 <span class="cell-unit">ADC</span>
               </div>
-              <div class="cell-footer">
-                <span id="tel-mq2-pct">Anomaly: 0%</span>
-                <span>Combustion</span>
-              </div>
+              <div class="cell-footer"><span id="tel-mq2-pct">Anomaly: 0%</span><span>Combustion</span></div>
             </div>
 
             <!-- MQ-7 Carbon Monoxide -->
@@ -353,10 +377,7 @@
                 <span class="cell-value" id="tel-mq7-val">280</span>
                 <span class="cell-unit">ADC</span>
               </div>
-              <div class="cell-footer">
-                <span id="tel-mq7-pct">Anomaly: 0%</span>
-                <span>CO Emission</span>
-              </div>
+              <div class="cell-footer"><span id="tel-mq7-pct">Anomaly: 0%</span><span>CO Emission</span></div>
             </div>
 
             <!-- Rain Intensity -->
@@ -369,10 +390,7 @@
                 <span class="cell-value" id="tel-rain-val">0</span>
                 <span class="cell-unit">%</span>
               </div>
-              <div class="cell-footer">
-                <span>FC-37 Rain Board</span>
-                <span>Precipitation</span>
-              </div>
+              <div class="cell-footer"><span>FC-37 Board</span><span>Precipitation</span></div>
             </div>
 
             <!-- Water Level Depth -->
@@ -385,43 +403,74 @@
                 <span class="cell-value" id="tel-water-val">12.5</span>
                 <span class="cell-unit">cm</span>
               </div>
-              <div class="cell-footer">
-                <span id="tel-waterrate-val">+0.0 cm/m</span>
-                <span>HC-SR04 Sonic</span>
-              </div>
+              <div class="cell-footer"><span id="tel-waterrate-val">+0.0 cm/m</span><span>HC-SR04 Sonic</span></div>
             </div>
 
-            <!-- Flame IR -->
+            <!-- Soil Moisture (FC-28) -->
+            <div class="telemetry-cell">
+              <div class="cell-header">
+                <span class="cell-label">SOIL MOISTURE</span>
+                <span class="cell-health ONLINE" id="health-soil">ONLINE</span>
+              </div>
+              <div class="cell-value-wrap">
+                <span class="cell-value" id="tel-soil-val">30.0</span>
+                <span class="cell-unit">%</span>
+              </div>
+              <div class="cell-footer"><span>FC-28 (GPIO 39)</span><span>Saturation</span></div>
+            </div>
+
+            <!-- Vibration (SW-420) -->
+            <div class="telemetry-cell">
+              <div class="cell-header">
+                <span class="cell-label">GROUND VIBRATION</span>
+                <span class="cell-health ONLINE" id="health-vib">ONLINE</span>
+              </div>
+              <div class="cell-value-wrap">
+                <span class="cell-value" id="tel-vib-val">0</span>
+                <span class="cell-unit">hits/s</span>
+              </div>
+              <div class="cell-footer"><span>SW-420 (GPIO 23)</span><span>Stability</span></div>
+            </div>
+
+            <!-- Water Quality pH -->
+            <div class="telemetry-cell">
+              <div class="cell-header">
+                <span class="cell-label">WATER PH</span>
+                <span class="cell-health ONLINE">ONLINE</span>
+              </div>
+              <div class="cell-value-wrap">
+                <span class="cell-value" id="tel-ph-val">7.10</span>
+                <span class="cell-unit">pH</span>
+              </div>
+              <div class="cell-footer"><span>Acidity Probe</span><span>Safe: 6.5-8.5</span></div>
+            </div>
+
+            <!-- Water Turbidity -->
+            <div class="telemetry-cell">
+              <div class="cell-header">
+                <span class="cell-label">WATER TURBIDITY</span>
+                <span class="cell-health ONLINE">ONLINE</span>
+              </div>
+              <div class="cell-value-wrap">
+                <span class="cell-value" id="tel-turb-val">8.0</span>
+                <span class="cell-unit">NTU</span>
+              </div>
+              <div class="cell-footer"><span>Clarity Sensor</span><span>Runoff Index</span></div>
+            </div>
+
+            <!-- Flame IR Sensor -->
             <div class="telemetry-cell">
               <div class="cell-header">
                 <span class="cell-label">FLAME SENSOR</span>
                 <span class="cell-health ONLINE" id="health-flame">ONLINE</span>
               </div>
               <div class="cell-value-wrap">
-                <span class="cell-value" id="tel-flame-val" style="font-size:15px; color:var(--sev-normal-text);">CLEAR</span>
+                <span class="cell-value" id="tel-flame-val" style="font-size:14px; color:var(--sev-normal-text);">CLEAR</span>
               </div>
-              <div class="cell-footer">
-                <span>GPIO25 Digital</span>
-                <span>Optical IR</span>
-              </div>
+              <div class="cell-footer"><span>GPIO 25 Digital</span><span>Optical IR</span></div>
             </div>
 
-            <!-- Battery Voltage -->
-            <div class="telemetry-cell">
-              <div class="cell-header">
-                <span class="cell-label">POWER SUPPLY</span>
-                <span class="cell-health ONLINE">ONLINE</span>
-              </div>
-              <div class="cell-value-wrap">
-                <span class="cell-value" id="tel-battery-val">3.85 V</span>
-              </div>
-              <div class="cell-footer">
-                <span>Li-Ion / 5V USB</span>
-                <span>Healthy</span>
-              </div>
-            </div>
-
-            <!-- Signal RSSI -->
+            <!-- Wi-Fi Link -->
             <div class="telemetry-cell">
               <div class="cell-header">
                 <span class="cell-label">WI-FI LINK</span>
@@ -430,46 +479,28 @@
               <div class="cell-value-wrap">
                 <span class="cell-value" id="tel-rssi-val">-65 dBm</span>
               </div>
-              <div class="cell-footer">
-                <span>Mesh RSSI</span>
-                <span>Strong Link</span>
-              </div>
-            </div>
-
-            <!-- Diagnostics -->
-            <div class="telemetry-cell">
-              <div class="cell-header">
-                <span class="cell-label">SYSTEM HEALTH</span>
-                <span class="cell-health ONLINE">STABLE</span>
-              </div>
-              <div class="cell-value-wrap">
-                <span class="cell-value" style="font-size:14px; color:var(--sev-normal-text);">8/8 CHANNELS</span>
-              </div>
-              <div class="cell-footer">
-                <span>Buffer: 0 pkts</span>
-                <span>Sync Nominal</span>
-              </div>
+              <div class="cell-footer"><span>ESP32 Wi-Fi</span><span>Strong Link</span></div>
             </div>
 
           </div>
         </div>
       </div>
 
-      <!-- Real-Time Time-Series Trend Charts -->
+      <!-- Real-Time Trend Charts -->
       <div class="panel" id="panel-charts">
         <div class="panel-header">
           <span class="panel-title">📈 Real-Time Multi-Parameter Dynamics</span>
-          <span class="panel-badge">LIVE TRENDS</span>
+          <span class="panel-badge">LIVE 60-SEC WINDOW</span>
         </div>
         <div class="panel-body">
 
           <!-- Hydro Chart -->
           <div class="chart-container">
             <div class="chart-header">
-              <span>HYDROLOGY: Water Depth & Rainfall Intensity</span>
+              <span>HYDROLOGY: Water Depth & Rainfall</span>
               <div class="chart-legend">
-                <div class="legend-item"><span class="legend-dot" style="background:#0284c7;"></span> Water Level (cm)</div>
-                <div class="legend-item"><span class="legend-dot" style="background:#06b6d4;"></span> Rain Intensity (%)</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#0284c7;"></span> Water (cm)</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#06b6d4;"></span> Rain (%)</div>
               </div>
             </div>
             <svg class="chart-svg" id="chart-hydro-svg"></svg>
@@ -480,8 +511,8 @@
             <div class="chart-header">
               <span>COMBUSTION & THERMAL: Smoke Anomaly vs Temperature</span>
               <div class="chart-legend">
-                <div class="legend-item"><span class="legend-dot" style="background:#e11d48;"></span> MQ-2 Smoke Anomaly (%)</div>
-                <div class="legend-item"><span class="legend-dot" style="background:#d97706;"></span> Temperature (°C)</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#e11d48;"></span> MQ-2 Smoke (%)</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#d97706;"></span> Temp (°C)</div>
               </div>
             </div>
             <svg class="chart-svg" id="chart-gas-svg"></svg>
@@ -490,12 +521,12 @@
           <!-- Multi-Hazard Scores Chart -->
           <div class="chart-container" style="margin-bottom:0;">
             <div class="chart-header">
-              <span>HAZARD SCORES: Flood vs Fire vs Pollution Risk</span>
+              <span>HAZARD RISK SCORES: Peak vs Flood vs Fire vs Industrial</span>
               <div class="chart-legend">
                 <div class="legend-item"><span class="legend-dot" style="background:#0284c7;"></span> Flood</div>
                 <div class="legend-item"><span class="legend-dot" style="background:#e11d48;"></span> Fire</div>
-                <div class="legend-item"><span class="legend-dot" style="background:#7c3aed;"></span> Pollution</div>
-                <div class="legend-item"><span style="color:#e11d48; font-weight:700;">---</span> Critical Line (75)</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#64748b;"></span> Industrial</div>
+                <div class="legend-item"><span style="color:#e11d48; font-weight:700;">---</span> Critical (75)</div>
               </div>
             </div>
             <svg class="chart-svg" id="chart-hazard-svg"></svg>
@@ -506,37 +537,73 @@
 
     </section>
 
-
-    <!-- Column 3: Explainable Alerts, Map & Scenario Injector -->
+    <!-- Column 3: Geospatial Map, Notifications, Hardware Connector, Scenario Injector -->
     <section class="col-right" aria-label="Alerts and Simulation Controls">
 
-      <!-- Explainable Alert Feed & Incident Log -->
-      <div class="panel" id="panel-alert-feed">
+      <!-- Geospatial Map Panel -->
+      <div class="panel" id="panel-map">
         <div class="panel-header">
-          <span class="panel-title">🚨 Explainable Alert Feed</span>
+          <span class="panel-title">🗺️ Regional Risk Mapping</span>
+          <span class="panel-badge">FIELD SECTORS</span>
+        </div>
+        <div class="panel-body">
+          <div id="leaflet-map"></div>
+        </div>
+      </div>
+
+      <!-- Multi-Tier Notification Feed -->
+      <div class="panel" id="panel-notifications">
+        <div class="panel-header">
+          <span class="panel-title">🚨 Community & Authority Alerts</span>
           <span class="panel-badge" id="badge-alert-count">0 ACTIVE</span>
         </div>
         <div class="panel-body">
-          <div class="alert-feed" id="alert-feed-container">
+          <!-- Notification Tier Tabs -->
+          <div class="notification-tabs">
+            <button class="notif-tab-btn active" data-tier="ALL">All Alerts</button>
+            <button class="notif-tab-btn" data-tier="CITIZEN">🏘️ Citizen</button>
+            <button class="notif-tab-btn" data-tier="AUTHORITY">🚔 Authority</button>
+            <button class="notif-tab-btn" data-tier="EMERGENCY">🆘 Emergency</button>
+          </div>
+          <div class="notification-feed" id="notification-feed-container">
             <!-- Dynamically populated -->
           </div>
         </div>
       </div>
 
-      <!-- Geospatial Topology Map -->
-      <div class="panel" id="panel-map">
+      <!-- Real Hardware Integration Panel -->
+      <div class="panel" id="panel-hardware-connector">
         <div class="panel-header">
-          <span class="panel-title">🗺️ Geospatial Deployment Topology</span>
-          <span class="panel-badge">FIELD SECTORS</span>
+          <span class="panel-title">🔌 Physical Node Hardware Link</span>
+          <span class="panel-badge" id="hw-status-badge">STANDBY</span>
         </div>
         <div class="panel-body">
-          <div class="map-container">
-            <svg class="map-svg" id="node-map-svg"></svg>
+          <div class="hw-status-row">
+            <span><strong>USB / Serial Link:</strong> <span id="hw-port-label">Disconnected</span></span>
+            <span id="hw-packets-count">0 pkts</span>
+          </div>
+
+          <div class="hw-input-group">
+            <input type="text" id="hw-port-input" class="hw-input" placeholder="COM3 or /dev/ttyUSB0" value="COM3" />
+            <button id="btn-hw-connect" class="hw-btn">Connect COM</button>
+            <button id="btn-hw-disconnect" class="hw-btn secondary hidden">Disconnect</button>
+          </div>
+
+          <div style="display:flex; gap:4px; margin-bottom:6px;">
+            <button id="btn-web-serial" class="hw-btn" style="width:100%;">⚡ Web Serial API (Chrome/Edge)</button>
+          </div>
+
+          <div style="font-size:10px; color:var(--text-muted); margin-bottom:4px;">
+            Or paste raw ESP32 JSON payload manually:
+          </div>
+          <textarea id="hw-manual-json" class="hw-json-paste" placeholder='{"node_id":"NODE_001","temperature":27.5,"water_level_cm":14.2}'></textarea>
+          <div style="display:flex; justify-content:flex-end; margin-top:4px;">
+            <button id="btn-hw-manual-ingest" class="hw-btn secondary">Ingest JSON</button>
           </div>
         </div>
       </div>
 
-      <!-- Simulation Scenario Injection Console (Hackathon Testing) -->
+      <!-- 15 Simulation Scenario Injector Console -->
       <div class="panel" id="panel-sim-controls">
         <div class="panel-header">
           <span class="panel-title">⚡ Interactive Scenario Injector</span>
@@ -544,39 +611,24 @@
         </div>
         <div class="panel-body">
           <div style="font-size:11px; color:var(--text-secondary); margin-bottom:8px;">
-            Simulate environmental emergency physics on selected node:
+            Simulate environmental hazard physics on selected node:
           </div>
           <div class="sim-controls-grid">
-            <button class="scenario-btn normal active" data-scenario="NORMAL" title="Baseline conditions">
-              <span class="btn-icon">✓</span> 1. Nominal Normal
-            </button>
-            <button class="scenario-btn warning" data-scenario="HEAVY_RAIN" title="Rainfall intensity rise">
-              <span class="btn-icon">🌧️</span> 2. Heavy Rain
-            </button>
-            <button class="scenario-btn danger" data-scenario="RAPID_WATER_RISE" title="Flash flood surge">
-              <span class="btn-icon">🌊</span> 3. Water Surge
-            </button>
-            <button class="scenario-btn danger" data-scenario="FLOOD" title="Critical overflow flood">
-              <span class="btn-icon">🚨</span> 4. Critical Flood
-            </button>
-            <button class="scenario-btn warning" data-scenario="SMOKE_EVENT" title="Smoldering smoke spike">
-              <span class="btn-icon">💨</span> 5. Smoke Anomaly
-            </button>
-            <button class="scenario-btn danger" data-scenario="FIRE" title="Open wildfire blaze">
-              <span class="btn-icon">🔥</span> 6. Wildfire Blaze
-            </button>
-            <button class="scenario-btn warning" data-scenario="POLLUTION_EVENT" title="Toxic chemical plume">
-              <span class="btn-icon">☣️</span> 7. Toxic Gas Plume
-            </button>
-            <button class="scenario-btn warning" data-scenario="SENSOR_FAILURE" title="Sensor hardware fault">
-              <span class="btn-icon">⚠️</span> 8. Sensor Fault
-            </button>
-            <button class="scenario-btn danger" data-scenario="NODE_OFFLINE" title="Node power loss">
-              <span class="btn-icon">🔌</span> 9. Node Disconnect
-            </button>
-            <button class="scenario-btn warning" data-scenario="WIFI_FAILURE" title="Wi-Fi network loss">
-              <span class="btn-icon">📡</span> 10. Wi-Fi Loss (Buffer)
-            </button>
+            <button class="scenario-btn active" data-scenario="NORMAL">✓ 1. Normal Baseline</button>
+            <button class="scenario-btn" data-scenario="HEAVY_RAIN">🌧️ 2. Heavy Rain</button>
+            <button class="scenario-btn" data-scenario="RAPID_WATER_RISE">🌊 3. Water Surge</button>
+            <button class="scenario-btn" data-scenario="FLOOD">🚨 4. Critical Flood</button>
+            <button class="scenario-btn" data-scenario="SMOKE_EVENT">💨 5. Smoke Anomaly</button>
+            <button class="scenario-btn" data-scenario="FIRE">🔥 6. Wildfire Blaze</button>
+            <button class="scenario-btn" data-scenario="POLLUTION_EVENT">☣️ 7. Toxic Gas Plume</button>
+            <button class="scenario-btn" data-scenario="EXTREME_HEAT">🌡️ 8. Extreme Heat Wave</button>
+            <button class="scenario-btn" data-scenario="LANDSLIDE_PRECURSOR">⛰️ 9. Landslide Warning</button>
+            <button class="scenario-btn" data-scenario="INDUSTRIAL_LEAK">🏭 10. Industrial Leak</button>
+            <button class="scenario-btn" data-scenario="WATER_CONTAMINATION">💧 11. Water Contamination</button>
+            <button class="scenario-btn" data-scenario="MULTI_HAZARD">💥 12. Multi-Hazard Wave</button>
+            <button class="scenario-btn" data-scenario="SENSOR_FAILURE">⚠️ 13. Sensor Fault</button>
+            <button class="scenario-btn" data-scenario="NODE_OFFLINE">🔌 14. Node Disconnect</button>
+            <button class="scenario-btn" data-scenario="WIFI_FAILURE">📡 15. Wi-Fi Buffer</button>
           </div>
         </div>
       </div>
@@ -585,6 +637,11 @@
 
   </main>
 
+  <!-- Leaflet Map JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Custom Map Wrapper -->
+  <script src="js/map.js"></script>
+  <!-- Main Application Logic -->
   <script src="js/app.js"></script>
 </body>
 </html>
