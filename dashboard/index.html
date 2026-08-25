@@ -140,7 +140,7 @@
       <div class="panel" id="panel-hazard-matrix">
         <div class="panel-header">
           <span class="panel-title">⚠️ Multi-Hazard Early Warning Index</span>
-          <span class="panel-badge">0-100 SCALE</span>
+          <span class="panel-badge">6 CORE HAZARDS</span>
         </div>
         <div class="panel-body">
           <div class="hazard-card-list">
@@ -148,29 +148,31 @@
             <!-- 1. Flood Risk -->
             <div class="hazard-card" id="card-flood">
               <div class="hazard-header">
-                <div class="hazard-title"><span>🌊</span><span>Flood Hazard</span></div>
+                <div class="hazard-title"><span>🌊</span><span>Flood &amp; Flash Flood</span></div>
                 <div class="hazard-score-wrap">
+                  <span class="trend-arrow flat" id="arrow-flood">→</span>
                   <span class="hazard-score-val" id="score-flood-val">0</span>
                   <span class="hazard-score-scale">/100</span>
                   <span class="severity-badge sev-NORMAL" id="badge-flood">[NORMAL]</span>
                 </div>
               </div>
               <div class="gauge-bar-bg"><div class="gauge-bar-fill" id="fill-flood"></div></div>
-              <div class="hazard-factors" id="factors-flood">• Drainage channel within safe capacity</div>
+              <div class="hazard-factors" id="factors-flood">• Water depth &amp; rise rate within safe limits</div>
             </div>
 
             <!-- 2. Fire Risk -->
             <div class="hazard-card" id="card-fire">
               <div class="hazard-header">
-                <div class="hazard-title"><span>🔥</span><span>Wildfire / Fire</span></div>
+                <div class="hazard-title"><span>🔥</span><span>Wildfire / Fire Blaze</span></div>
                 <div class="hazard-score-wrap">
+                  <span class="trend-arrow flat" id="arrow-fire">→</span>
                   <span class="hazard-score-val" id="score-fire-val">0</span>
                   <span class="hazard-score-scale">/100</span>
                   <span class="severity-badge sev-NORMAL" id="badge-fire">[NORMAL]</span>
                 </div>
               </div>
               <div class="gauge-bar-bg"><div class="gauge-bar-fill" id="fill-fire"></div></div>
-              <div class="hazard-factors" id="factors-fire">• Thermal and combustion sensors nominal</div>
+              <div class="hazard-factors" id="factors-fire">• No flame or combustion signature detected</div>
             </div>
 
             <!-- 3. Air Pollution -->
@@ -178,20 +180,22 @@
               <div class="hazard-header">
                 <div class="hazard-title"><span>☣️</span><span>Hazardous Air Pollution</span></div>
                 <div class="hazard-score-wrap">
+                  <span class="trend-arrow flat" id="arrow-pollution">→</span>
                   <span class="hazard-score-val" id="score-pollution-val">0</span>
                   <span class="hazard-score-scale">/100</span>
                   <span class="severity-badge sev-NORMAL" id="badge-pollution">[NORMAL]</span>
                 </div>
               </div>
               <div class="gauge-bar-bg"><div class="gauge-bar-fill" id="fill-pollution"></div></div>
-              <div class="hazard-factors" id="factors-pollution">• Clean atmospheric VOC / CO baseline</div>
+              <div class="hazard-factors" id="factors-pollution">• VOC / CO baseline within safe AQI range</div>
             </div>
 
             <!-- 4. Extreme Heat -->
             <div class="hazard-card" id="card-heat">
               <div class="hazard-header">
-                <div class="hazard-title"><span>🌡️</span><span>Extreme Heat</span></div>
+                <div class="hazard-title"><span>🌡️</span><span>Extreme Heat / Heat Index</span></div>
                 <div class="hazard-score-wrap">
+                  <span class="trend-arrow flat" id="arrow-heat">→</span>
                   <span class="hazard-score-val" id="score-heat-val">0</span>
                   <span class="hazard-score-scale">/100</span>
                   <span class="severity-badge sev-NORMAL" id="badge-heat">[NORMAL]</span>
@@ -206,6 +210,7 @@
               <div class="hazard-header">
                 <div class="hazard-title"><span>⛰️</span><span>Landslide Precursor</span></div>
                 <div class="hazard-score-wrap">
+                  <span class="trend-arrow flat" id="arrow-landslide">→</span>
                   <span class="hazard-score-val" id="score-landslide-val">0</span>
                   <span class="hazard-score-scale">/100</span>
                   <span class="severity-badge sev-NORMAL" id="badge-landslide">[NORMAL]</span>
@@ -220,6 +225,7 @@
               <div class="hazard-header">
                 <div class="hazard-title"><span>🏭</span><span>Industrial Emissions / Leaks</span></div>
                 <div class="hazard-score-wrap">
+                  <span class="trend-arrow flat" id="arrow-industrial">→</span>
                   <span class="hazard-score-val" id="score-industrial-val">0</span>
                   <span class="hazard-score-scale">/100</span>
                   <span class="severity-badge sev-NORMAL" id="badge-industrial">[NORMAL]</span>
@@ -229,22 +235,9 @@
               <div class="hazard-factors" id="factors-industrial">• No industrial solvent or gas leaks detected</div>
             </div>
 
-            <!-- 7. Water Quality Degradation -->
-            <div class="hazard-card" id="card-water-quality">
-              <div class="hazard-header">
-                <div class="hazard-title"><span>💧</span><span>Water Quality Degradation</span></div>
-                <div class="hazard-score-wrap">
-                  <span class="hazard-score-val" id="score-water-quality-val">0</span>
-                  <span class="hazard-score-scale">/100</span>
-                  <span class="severity-badge sev-NORMAL" id="badge-water-quality">[NORMAL]</span>
-                </div>
-              </div>
-              <div class="gauge-bar-bg"><div class="gauge-bar-fill" id="fill-water-quality"></div></div>
-              <div class="hazard-factors" id="factors-water-quality">• Water pH and turbidity baseline nominal</div>
-            </div>
-
           </div>
         </div>
+
       </div>
 
       <!-- Virtual ESP32 Hardware OLED Mirror -->
@@ -432,32 +425,6 @@
               <div class="cell-footer"><span>SW-420 (GPIO 23)</span><span>Stability</span></div>
             </div>
 
-            <!-- Water Quality pH -->
-            <div class="telemetry-cell">
-              <div class="cell-header">
-                <span class="cell-label">WATER PH</span>
-                <span class="cell-health ONLINE">ONLINE</span>
-              </div>
-              <div class="cell-value-wrap">
-                <span class="cell-value" id="tel-ph-val">7.10</span>
-                <span class="cell-unit">pH</span>
-              </div>
-              <div class="cell-footer"><span>Acidity Probe</span><span>Safe: 6.5-8.5</span></div>
-            </div>
-
-            <!-- Water Turbidity -->
-            <div class="telemetry-cell">
-              <div class="cell-header">
-                <span class="cell-label">WATER TURBIDITY</span>
-                <span class="cell-health ONLINE">ONLINE</span>
-              </div>
-              <div class="cell-value-wrap">
-                <span class="cell-value" id="tel-turb-val">8.0</span>
-                <span class="cell-unit">NTU</span>
-              </div>
-              <div class="cell-footer"><span>Clarity Sensor</span><span>Runoff Index</span></div>
-            </div>
-
             <!-- Flame IR Sensor -->
             <div class="telemetry-cell">
               <div class="cell-header">
@@ -503,7 +470,7 @@
                 <div class="legend-item"><span class="legend-dot" style="background:#06b6d4;"></span> Rain (%)</div>
               </div>
             </div>
-            <svg class="chart-svg" id="chart-hydro-svg"></svg>
+            <svg class="chart-svg" id="chart-hydro-svg" style="height:110px;"></svg>
           </div>
 
           <!-- Gas / Thermal Chart -->
@@ -515,7 +482,7 @@
                 <div class="legend-item"><span class="legend-dot" style="background:#d97706;"></span> Temp (°C)</div>
               </div>
             </div>
-            <svg class="chart-svg" id="chart-gas-svg"></svg>
+            <svg class="chart-svg" id="chart-gas-svg" style="height:110px;"></svg>
           </div>
 
           <!-- Multi-Hazard Scores Chart -->
@@ -529,7 +496,7 @@
                 <div class="legend-item"><span style="color:#e11d48; font-weight:700;">---</span> Critical (75)</div>
               </div>
             </div>
-            <svg class="chart-svg" id="chart-hazard-svg"></svg>
+            <svg class="chart-svg" id="chart-hazard-svg" style="height:110px;"></svg>
           </div>
 
         </div>
@@ -543,8 +510,8 @@
       <!-- Geospatial Map Panel -->
       <div class="panel" id="panel-map">
         <div class="panel-header">
-          <span class="panel-title">🗺️ Regional Risk Mapping</span>
-          <span class="panel-badge">FIELD SECTORS</span>
+          <span class="panel-title">🗺️ Chennai Region — 4 Environmental Monitoring Zones</span>
+          <span class="panel-badge">LIVE RISK MAP</span>
         </div>
         <div class="panel-body">
           <div id="leaflet-map"></div>
@@ -624,11 +591,10 @@
             <button class="scenario-btn" data-scenario="EXTREME_HEAT">🌡️ 8. Extreme Heat Wave</button>
             <button class="scenario-btn" data-scenario="LANDSLIDE_PRECURSOR">⛰️ 9. Landslide Warning</button>
             <button class="scenario-btn" data-scenario="INDUSTRIAL_LEAK">🏭 10. Industrial Leak</button>
-            <button class="scenario-btn" data-scenario="WATER_CONTAMINATION">💧 11. Water Contamination</button>
-            <button class="scenario-btn" data-scenario="MULTI_HAZARD">💥 12. Multi-Hazard Wave</button>
-            <button class="scenario-btn" data-scenario="SENSOR_FAILURE">⚠️ 13. Sensor Fault</button>
-            <button class="scenario-btn" data-scenario="NODE_OFFLINE">🔌 14. Node Disconnect</button>
-            <button class="scenario-btn" data-scenario="WIFI_FAILURE">📡 15. Wi-Fi Buffer</button>
+            <button class="scenario-btn" data-scenario="MULTI_HAZARD">💥 11. Multi-Hazard Wave</button>
+            <button class="scenario-btn" data-scenario="SENSOR_FAILURE">⚠️ 12. Sensor Fault</button>
+            <button class="scenario-btn" data-scenario="NODE_OFFLINE">🔌 13. Node Disconnect</button>
+            <button class="scenario-btn" data-scenario="WIFI_FAILURE">📡 14. Wi-Fi Buffer</button>
           </div>
         </div>
       </div>

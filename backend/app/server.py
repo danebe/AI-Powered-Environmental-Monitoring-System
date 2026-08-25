@@ -21,30 +21,92 @@ def ensure_sound_files(static_dir: str):
     sounds_dir = os.path.join(static_dir, "sounds")
     os.makedirs(sounds_dir, exist_ok=True)
 
-    def create_wav(filename, duration, gen_fn):
+    def write_wav(filename, frames_bytes, sample_rate=44100):
         filepath = os.path.join(sounds_dir, filename)
-        if os.path.exists(filepath):
+        if os.path.exists(filepath) and os.path.getsize(filepath) > 1000:
             return
-        sample_rate = 44100
-        num_samples = int(duration * sample_rate)
         try:
             with wave.open(filepath, 'w') as wav:
                 wav.setnchannels(1)
                 wav.setsampwidth(2)
                 wav.setframerate(sample_rate)
-                frames = bytearray()
-                for i in range(num_samples):
-                    t = float(i) / sample_rate
-                    val = max(-1.0, min(1.0, gen_fn(t, duration)))
-                    frames.extend(struct.pack('<h', int(val * 32767.0 * 0.45)))
-                wav.writeframes(frames)
+                wav.writeframes(frames_bytes)
         except Exception:
             pass
 
-    create_wav("eas_warning.wav", 1.5, lambda t, d: (math.sin(2.0 * math.pi * 853.0 * t) + math.sin(2.0 * math.pi * 960.0 * t)) * 0.5)
-    create_wav("eas_flood.wav", 4.0, lambda t, d: (math.sin(2.0 * math.pi * 853.0 * t) + math.sin(2.0 * math.pi * 960.0 * t)) * 0.5 if t < 1.0 else math.sin(2.0 * math.pi * (480.0 + 220.0 * math.sin(2.0 * math.pi * 0.4 * (t - 1.0))) * t))
-    create_wav("eas_fire.wav", 3.5, lambda t, d: (math.sin(2.0 * math.pi * 853.0 * t) + math.sin(2.0 * math.pi * 960.0 * t)) * 0.5 if t < 0.8 else math.sin(2.0 * math.pi * (1050.0 if int((t - 0.8)/0.15)%2==1 else 780.0) * t) * (0.6 + 0.4 * math.exp(-3.0 * ((t - 0.8) % 0.15))))
-    create_wav("eas_gas.wav", 3.5, lambda t, d: (math.sin(2.0 * math.pi * 853.0 * t) + math.sin(2.0 * math.pi * 960.0 * t)) * 0.5 if t < 0.8 else (math.sin(2.0 * math.pi * 1400.0 * t) if ((t-0.8)%0.4)<0.15 else (math.sin(2.0 * math.pi * 1650.0 * t) if ((t-0.8)%0.4)<0.3 else 0.0)))
+    # 1. EAS Warning: 853 Hz + 960 Hz FCC Attention Signal
+    def gen_warning_bytes(duration=2.0, sr=44100):
+        frames = bytearray()
+        dt = 1.0 / sr
+        p1, p2 = 0.0, 0.0
+        for i in range(int(duration * sr)):
+            t = float(i) / sr
+            env = min(1.0, t / 0.08) * min(1.0, (duration - t) / 0.08)
+            p1 += 2.0 * math.pi * 853.0 * dt
+            p2 += 2.0 * math.pi * 960.0 * dt
+            s = 0.5 * (math.sin(p1) + math.sin(p2)) * env
+            frames.extend(struct.pack('<h', int(max(-1.0, min(1.0, s)) * 32767.0 * 0.45)))
+        return frames
+
+    # 2. Authentic Civil Defense Air Raid Siren (Dual-Rotor Mechanical Tone Sweep)
+    def gen_flood_bytes(duration=10.0, sr=44100):
+        frames = bytearray()
+        dt = 1.0 / sr
+        pm, ph, ps, po = 0.0, 0.0, 0.0, 0.0
+        for i in range(int(duration * sr)):
+            t = float(i) / sr
+            cycle = ((math.sin(2.0 * math.pi * 0.25 * t - (math.pi / 2.0)) + 1.0) * 0.5) ** 1.3
+            attack = min(1.0, t / 1.2)
+            release = min(1.0, (duration - t) / 1.8) if duration > t else 0.0
+            env = attack * release
+            freq = (350.0 + 400.0 * cycle) * (0.6 + 0.4 * attack) * (0.5 + 0.5 * release)
+            pm += 2.0 * math.pi * freq * dt
+            ph += 2.0 * math.pi * (freq * 1.5) * dt
+            ps += 2.0 * math.pi * (freq * 0.5) * dt
+            po += 2.0 * math.pi * (freq * 2.0) * dt
+            sm = math.sin(pm) + 0.15 * math.sin(3.0 * pm)
+            sh = 0.40 * (math.sin(ph) + 0.10 * math.sin(3.0 * ph))
+            ss = 0.20 * math.sin(ps)
+            so = 0.12 * math.sin(po)
+            rumble = 0.88 + 0.12 * math.sin(2.0 * math.pi * 12.0 * t)
+            val = (sm + sh + ss + so) * rumble * env * 0.70
+            frames.extend(struct.pack('<h', int(max(-1.0, min(1.0, val)) * 32767.0 * 0.55)))
+        return frames
+
+    # 3. Fire / Extreme Hazard Klaxon
+    def gen_fire_bytes(duration=4.0, sr=44100):
+        frames = bytearray()
+        dt = 1.0 / sr
+        phase = 0.0
+        for i in range(int(duration * sr)):
+            t = float(i) / sr
+            env = min(1.0, t / 0.1) * min(1.0, (duration - t) / 0.2)
+            freq = 1050.0 if (int(t / 0.35) % 2 == 0) else 780.0
+            phase += 2.0 * math.pi * freq * dt
+            pulse = 0.6 + 0.4 * math.exp(-3.0 * (t % 0.35))
+            s = math.sin(phase) * pulse * env
+            frames.extend(struct.pack('<h', int(max(-1.0, min(1.0, s)) * 32767.0 * 0.50)))
+        return frames
+
+    # 4. Toxic Gas / Chemical Plume Strobe
+    def gen_gas_bytes(duration=4.0, sr=44100):
+        frames = bytearray()
+        dt = 1.0 / sr
+        p1, p2 = 0.0, 0.0
+        for i in range(int(duration * sr)):
+            t = float(i) / sr
+            env = min(1.0, t / 0.1) * min(1.0, (duration - t) / 0.2)
+            sub_t = t % 0.4
+            p1 += 2.0 * math.pi * 1400.0 * dt
+            p2 += 2.0 * math.pi * 1650.0 * dt
+            s = math.sin(p1) * env if sub_t < 0.14 else (math.sin(p2) * env if sub_t < 0.28 else 0.0)
+            frames.extend(struct.pack('<h', int(max(-1.0, min(1.0, s)) * 32767.0 * 0.50)))
+        return frames
+
+    write_wav("eas_warning.wav", gen_warning_bytes(2.0))
+    write_wav("eas_flood.wav", gen_flood_bytes(10.0))
+    write_wav("eas_fire.wav", gen_fire_bytes(4.0))
+    write_wav("eas_gas.wav", gen_gas_bytes(4.0))
 
 
 from .schemas import TelemetryPayload, Location, SensorHealth, SystemThresholds, AlertEvent
@@ -439,6 +501,22 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             scenario = req_data.get("scenario", "NORMAL")
             node_id = req_data.get("node_id", "NODE_001")
             ok = self.engine.simulator.set_scenario(scenario, node_id)
+            
+            if ok and scenario == "NORMAL":
+                self.engine.alert_engine.clear_active_alerts()
+                for nid, detector in self.engine.anomaly_detectors.items():
+                    baseline = self.engine.simulator._BASELINES.get(nid, {})
+                    detector.reset_to_baseline(
+                        temp=baseline.get("temp", 30.0),
+                        water=baseline.get("water", 12.0),
+                        mq2=baseline.get("mq2", 300.0),
+                        mq7=baseline.get("mq7", 250.0),
+                        gas_res=baseline.get("bme_res", 120000.0),
+                        rain=0.0,
+                        soil=baseline.get("soil", 35.0),
+                        vib=baseline.get("vibration", 0.0)
+                    )
+            
             self._set_json_headers(200 if ok else 400)
             self.wfile.write(json.dumps({
                 "status": "success" if ok else "invalid_scenario",

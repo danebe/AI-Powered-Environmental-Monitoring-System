@@ -21,14 +21,14 @@ class TestScenarioSimulator(unittest.TestCase):
         self.engine = RiskFusionEngine()
         self.detector = NodeAnomalyDetector("NODE_001")
 
-    def test_all_15_scenarios_supported(self):
+    def test_all_14_scenarios_supported(self):
         expected = [
             "NORMAL", "HEAVY_RAIN", "RAPID_WATER_RISE", "FLOOD",
             "SMOKE_EVENT", "FIRE", "POLLUTION_EVENT", "EXTREME_HEAT",
-            "LANDSLIDE_PRECURSOR", "INDUSTRIAL_LEAK", "WATER_CONTAMINATION",
+            "LANDSLIDE_PRECURSOR", "INDUSTRIAL_LEAK",
             "MULTI_HAZARD", "SENSOR_FAILURE", "NODE_OFFLINE", "WIFI_FAILURE"
         ]
-        self.assertEqual(len(self.sim.SCENARIOS), 15)
+        self.assertEqual(len(self.sim.SCENARIOS), 14)
         for sc in expected:
             self.assertIn(sc, self.sim.SCENARIOS)
             ok = self.sim.set_scenario(sc, "NODE_001")

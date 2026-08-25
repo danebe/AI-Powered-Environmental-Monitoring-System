@@ -54,13 +54,12 @@ class AlertEngine:
         new_or_updated_events = []
 
         hazards = [
-            ("FLOOD", scores.flood_score, scores.flood_severity, scores.flood_reasons),
-            ("FIRE", scores.fire_score, scores.fire_severity, scores.fire_reasons),
-            ("POLLUTION", scores.pollution_score, scores.pollution_severity, scores.pollution_reasons),
-            ("HEAT", scores.heat_score, scores.heat_severity, scores.heat_reasons),
-            ("LANDSLIDE", scores.landslide_score, scores.landslide_severity, scores.landslide_reasons),
-            ("INDUSTRIAL", scores.industrial_score, scores.industrial_severity, scores.industrial_reasons),
-            ("WATER_QUALITY", scores.water_quality_score, scores.water_quality_severity, scores.water_quality_reasons),
+            ("FLOOD",      scores.flood_score,      scores.flood_severity,      scores.flood_reasons),
+            ("FIRE",       scores.fire_score,        scores.fire_severity,       scores.fire_reasons),
+            ("POLLUTION",  scores.pollution_score,   scores.pollution_severity,  scores.pollution_reasons),
+            ("HEAT",       scores.heat_score,        scores.heat_severity,       scores.heat_reasons),
+            ("LANDSLIDE",  scores.landslide_score,   scores.landslide_severity,  scores.landslide_reasons),
+            ("INDUSTRIAL", scores.industrial_score,  scores.industrial_severity, scores.industrial_reasons),
         ]
 
         for h_type, score, severity, reasons in hazards:
@@ -132,6 +131,11 @@ class AlertEngine:
                 evt.acknowledged_at = time.time()
                 return True
         return False
+
+    def clear_active_alerts(self):
+        """Clear all currently active in-memory alerts (used when operator clicks Reset to Normal)."""
+        self.active_alerts.clear()
+        self.last_emitted_time.clear()
 
     def get_active_alerts(self) -> List[Dict[str, Any]]:
         return [evt.to_dict() for evt in self.active_alerts.values()]
