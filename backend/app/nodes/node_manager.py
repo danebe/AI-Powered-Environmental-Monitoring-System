@@ -12,10 +12,10 @@ class NodeManager:
     """
     4-node registry representing distinct environmental deployment zones.
 
-    NODE_001 — Industrial Zone   (chemical leaks, VOC, CO emissions)
-    NODE_002 — Forest Edge       (wildfire, smoke, extreme heat)
-    NODE_003 — Coastal / River   (flooding, flash flood, water quality)
-    NODE_004 — Hillside          (landslide precursors, soil saturation, vibration)
+    NODE_001 — Manali Industrial Estate, North Chennai  (petrochemical, VOC, CO, TNPCB zone)
+    NODE_002 — Guindy National Park, Chennai            (wildfire, smoke, extreme heat, forest edge)
+    NODE_003 — Adyar River Estuary, Besant Nagar        (flash flood, coastal surge, water quality)
+    NODE_004 — Pallavaram Hills, Tambaram               (landslide, soil saturation, ground vibration)
     """
 
     NODE_TIMEOUT_SECONDS = 15.0
@@ -28,38 +28,38 @@ class NodeManager:
         defaults = [
             NodeMetadata(
                 node_id   = "NODE_001",
-                name      = "Industrial Zone Node",
+                name      = "Manali Industrial Estate",
                 zone_type = "INDUSTRIAL",
                 location  = Location(
-                    latitude=28.6080, longitude=77.2280, altitude_m=212.0,
-                    zone_description="Chemical & Manufacturing Sector"
+                    latitude=13.1700, longitude=80.2620, altitude_m=8.0,
+                    zone_description="TNPCB Petrochemical & Fertilizer Cluster, North Chennai"
                 )
             ),
             NodeMetadata(
                 node_id   = "NODE_002",
-                name      = "Forest Edge Node",
+                name      = "Guindy National Park",
                 zone_type = "FOREST",
                 location  = Location(
-                    latitude=28.6139, longitude=77.2090, altitude_m=216.0,
-                    zone_description="Northern Forest Boundary"
+                    latitude=13.0067, longitude=80.2206, altitude_m=22.0,
+                    zone_description="Urban Forest Reserve — Only National Park Inside an Indian Metro"
                 )
             ),
             NodeMetadata(
                 node_id   = "NODE_003",
-                name      = "Coastal / River Basin Node",
+                name      = "Adyar River Estuary",
                 zone_type = "RIVER",
                 location  = Location(
-                    latitude=28.6185, longitude=77.2150, altitude_m=208.0,
-                    zone_description="Flood-Prone Lowland River Channel"
+                    latitude=12.9985, longitude=80.2537, altitude_m=3.0,
+                    zone_description="Coastal Flood Zone — Adyar Estuary & Besant Nagar, Cyclone Vardah Impact Area"
                 )
             ),
             NodeMetadata(
                 node_id   = "NODE_004",
-                name      = "Hillside Node",
+                name      = "Pallavaram Hills",
                 zone_type = "AGRICULTURAL",
                 location  = Location(
-                    latitude=28.6020, longitude=77.2010, altitude_m=260.0,
-                    zone_description="Landslide-Prone Hillside Terrain"
+                    latitude=12.9675, longitude=80.1514, altitude_m=75.0,
+                    zone_description="Landslide-Sensitive Elevated Terrain — Pallavaram–Tambaram Ridge"
                 )
             ),
         ]

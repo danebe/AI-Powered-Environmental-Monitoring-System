@@ -4,7 +4,7 @@
  */
 
 class RiskMap {
-  constructor(containerId = "leaflet-map", center = [28.6105, 77.2132], zoom = 14) {
+  constructor(containerId = "leaflet-map", center = [13.0850, 80.2101], zoom = 11) {
     this.containerId = containerId;
     this.center = center;
     this.zoom = zoom;
@@ -121,8 +121,8 @@ class RiskMap {
       const isOnline = node.status === "ONLINE";
 
       const loc = node.location || {};
-      const lat = loc.latitude || 28.6139;
-      const lon = loc.longitude || 77.2090;
+      const lat = loc.latitude || 13.0850;
+      const lon = loc.longitude || 80.2101;
       const zone = node.zone_type || "URBAN";
 
       const icon = this.createNodeIcon(nid, zone, highestScore, highestSev, isOnline);

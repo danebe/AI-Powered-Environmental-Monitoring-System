@@ -38,7 +38,7 @@ class RiskFusionEngine:
                      "landslide_score","industrial_score","water_quality_score"):
             setattr(bd, attr, round(getattr(bd, attr), 1))
 
-        # Determine overall highest hazard
+        # Determine overall highest hazard (6 Core Physical Hazard Dimensions)
         candidates = [
             ("FLOOD",        bd.flood_score,         bd.flood_severity),
             ("FIRE",         bd.fire_score,          bd.fire_severity),
@@ -46,7 +46,6 @@ class RiskFusionEngine:
             ("HEAT",         bd.heat_score,          bd.heat_severity),
             ("LANDSLIDE",    bd.landslide_score,     bd.landslide_severity),
             ("INDUSTRIAL",   bd.industrial_score,    bd.industrial_severity),
-            ("WATER_QUALITY",bd.water_quality_score, bd.water_quality_severity),
         ]
         best = max(candidates, key=lambda x: x[1])
         bd.highest_score    = round(best[1], 1)

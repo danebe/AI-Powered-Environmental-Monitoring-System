@@ -19,7 +19,7 @@ class DashboardApp {
     this.audioFire = new Audio("sounds/eas_fire.wav");
     this.audioGas = new Audio("sounds/eas_gas.wav");
 
-    // Time-series ring buffers for SVG charts (last 30 samples)
+    // Time-series ring buffers for SVG charts — 60-second window at 1 Hz
     this.chartData = {
       timestamps: [],
       water_level: [],
@@ -30,6 +30,14 @@ class DashboardApp {
       fire_score: [],
       industrial_score: []
     };
+
+    // Hazard score tracking for trend arrows (previous sample)
+    this.prevHazardScores = {};
+
+    // Desktop notification cooldown map: alertId -> last fired timestamp
+    this.notificationCooldowns = {};
+    this.desktopNotifEnabled = false;
+    this._requestNotificationPermission();
 
     // Geospatial Leaflet Map instance
     this.riskMap = new RiskMap("leaflet-map");
@@ -60,6 +68,9 @@ class DashboardApp {
     // Periodic hardware & notification status polling
     setInterval(() => this.pollHardwareStatus(), 4000);
     this.pollHardwareStatus();
+
+    // In-app toast container
+    this._ensureToastContainer();
   }
 
   // --------------------------------------------------------------------------
@@ -141,11 +152,20 @@ class DashboardApp {
     if (!this.alarmActive || this.audioSilenced) return;
 
     try {
-      if (severity === "CRITICAL") {
-        if (hazardType === "FLOOD") this.audioFlood.play();
-        else if (hazardType === "FIRE" || hazardType === "HEAT") this.audioFire.play();
-        else if (hazardType === "POLLUTION" || hazardType === "INDUSTRIAL" || hazardType === "WATER_QUALITY") this.audioGas.play();
-        else this.audioWarning.play();
+      if (severity === "CRITICAL" || severity === "WARNING") {
+        let audioToPlay = this.audioWarning;
+        if (hazardType === "FLOOD" || hazardType === "LANDSLIDE") {
+          audioToPlay = this.audioFlood;
+        } else if (hazardType === "FIRE" || hazardType === "HEAT") {
+          audioToPlay = this.audioFire;
+        } else if (hazardType === "POLLUTION" || hazardType === "INDUSTRIAL") {
+          audioToPlay = this.audioGas;
+        }
+
+        // Only start playback if not already actively playing (prevents 1Hz choppy stuttering)
+        if (audioToPlay && (audioToPlay.paused || audioToPlay.ended)) {
+          audioToPlay.play().catch(() => {});
+        }
       }
     } catch (e) {
       // Browser autoplay policy catch
@@ -439,7 +459,7 @@ class DashboardApp {
     const hazardPill = document.getElementById("pill-hazard");
     hazardPill.className = `metric-pill ${peakScore >= 75 ? 'danger' : (peakScore >= 50 ? 'warning' : 'healthy')}`;
 
-    // 2. Active Emergency Banner
+    // 2. Active Emergency Banner + Desktop/Toast Notifications
     const banner = document.getElementById("emergency-banner");
     const criticalAlerts = (overview.active_alerts || []).filter(a => a.severity === "CRITICAL");
     if (criticalAlerts.length > 0 && !this.audioSilenced) {
@@ -449,6 +469,8 @@ class DashboardApp {
       document.getElementById("emergency-desc").textContent = (topAlert.reasons || [])[0] || "Immediate danger detected.";
       document.getElementById("emergency-action").textContent = `ACTION: EVACUATE ${topAlert.node_id}`;
       this.playHazardSound(topAlert.hazard_type, topAlert.severity);
+      // Fire desktop + in-app toast notification (with 60s cooldown)
+      criticalAlerts.forEach(a => this._fireDesktopNotification(a));
     } else if (criticalAlerts.length === 0) {
       banner.classList.add("hidden");
     }
@@ -527,6 +549,7 @@ class DashboardApp {
       fire_score: [],
       industrial_score: []
     };
+    this.prevHazardScores = {};
 
     fetch("/api/overview")
       .then(r => r.json())
@@ -540,26 +563,69 @@ class DashboardApp {
     const norm = state.normalized || {};
     const read = state.readings || {};
 
-    const setVal = (id, val) => {
+    const setVal = (id, val, colorClass) => {
       const el = document.getElementById(id);
-      if (el) el.textContent = val;
+      if (!el) return;
+      el.textContent = val;
+      if (colorClass) {
+        el.className = el.className.replace(/\bval-(safe|warn|danger)\b/g, "");
+        el.classList.add(`val-${colorClass}`);
+      }
     };
 
-    setVal("tel-temp-val", norm.temperature_c !== undefined ? norm.temperature_c.toFixed(1) : "--");
-    setVal("tel-hum-val", norm.humidity_pct !== undefined ? Math.round(norm.humidity_pct) : "--");
+    // Temperature: safe <35, warn 35-45, danger >45
+    const temp = norm.temperature_c;
+    setVal("tel-temp-val", temp !== undefined ? temp.toFixed(1) : "--",
+      temp === undefined ? null : temp > 45 ? "danger" : temp > 35 ? "warn" : "safe");
+
+    // Humidity
+    const hum = norm.humidity_pct;
+    setVal("tel-hum-val", hum !== undefined ? Math.round(hum) : "--",
+      hum === undefined ? null : hum > 90 ? "danger" : hum > 75 ? "warn" : "safe");
+
     setVal("tel-pres-val", norm.pressure_hpa !== undefined ? Math.round(norm.pressure_hpa) : "--");
-    setVal("tel-gasres-val", norm.gas_resistance_ohms !== undefined ? (norm.gas_resistance_ohms / 1000).toFixed(1) : "--");
-    setVal("tel-mq2-val", read.mq2_raw || "--");
+
+    // Gas resistance: danger <20k, warn <50k, safe >50k (high = clean air)
+    const gasRes = norm.gas_resistance_ohms;
+    setVal("tel-gasres-val", gasRes !== undefined ? (gasRes / 1000).toFixed(1) : "--",
+      gasRes === undefined ? null : gasRes < 20000 ? "danger" : gasRes < 50000 ? "warn" : "safe");
+
+    // MQ-2: ADC safe <500, warn 500-1500, danger >1500
+    const mq2 = read.mq2_raw;
+    setVal("tel-mq2-val", mq2 || "--",
+      mq2 === undefined ? null : mq2 > 1500 ? "danger" : mq2 > 500 ? "warn" : "safe");
     setVal("tel-mq2-pct", `Anomaly: ${Math.round(norm.mq2_anomaly_pct || 0)}%`);
-    setVal("tel-mq7-val", read.mq7_raw || "--");
+
+    const mq7 = read.mq7_raw;
+    setVal("tel-mq7-val", mq7 || "--",
+      mq7 === undefined ? null : mq7 > 1200 ? "danger" : mq7 > 450 ? "warn" : "safe");
     setVal("tel-mq7-pct", `Anomaly: ${Math.round(norm.mq7_anomaly_pct || 0)}%`);
-    setVal("tel-rain-val", Math.round(norm.rain_intensity_pct || 0));
-    setVal("tel-water-val", norm.water_level_cm !== undefined ? norm.water_level_cm.toFixed(1) : "--");
-    setVal("tel-waterrate-val", `${norm.water_rate_of_rise_cm_min >= 0 ? '+' : ''}${(norm.water_rate_of_rise_cm_min || 0).toFixed(1)} cm/m`);
-    setVal("tel-soil-val", (norm.soil_moisture_pct || 0).toFixed(1));
-    setVal("tel-vib-val", norm.vibration_hits || 0);
-    setVal("tel-ph-val", (norm.water_ph || 7.0).toFixed(2));
-    setVal("tel-turb-val", (norm.water_turbidity_ntu || 0).toFixed(1));
+
+    // Rain: warn >40%, danger >75%
+    const rain = Math.round(norm.rain_intensity_pct || 0);
+    setVal("tel-rain-val", rain, rain > 75 ? "danger" : rain > 40 ? "warn" : "safe");
+
+    // Water level: warn >40cm, danger >70cm
+    const water = norm.water_level_cm;
+    setVal("tel-water-val", water !== undefined ? water.toFixed(1) : "--",
+      water === undefined ? null : water > 70 ? "danger" : water > 40 ? "warn" : "safe");
+
+    const rateStr = `${norm.water_rate_of_rise_cm_min >= 0 ? '+' : ''}${(norm.water_rate_of_rise_cm_min || 0).toFixed(1)} cm/m`;
+    const rateEl = document.getElementById("tel-waterrate-val");
+    if (rateEl) {
+      rateEl.textContent = rateStr;
+      const rate = norm.water_rate_of_rise_cm_min || 0;
+      rateEl.style.color = rate > 5 ? "#dc2626" : rate > 2 ? "#ea580c" : "inherit";
+    }
+
+    // Soil: warn >65%, danger >85%
+    const soil = norm.soil_moisture_pct || 0;
+    setVal("tel-soil-val", soil.toFixed(1), soil > 85 ? "danger" : soil > 65 ? "warn" : "safe");
+
+    // Vibration: warn >5, danger >20
+    const vib = norm.vibration_hits || 0;
+    setVal("tel-vib-val", vib, vib > 20 ? "danger" : vib > 5 ? "warn" : "safe");
+
     setVal("tel-rssi-val", `${read.signal_strength || -65} dBm`);
 
     const flameEl = document.getElementById("tel-flame-val");
@@ -575,30 +641,40 @@ class DashboardApp {
   }
 
   // --------------------------------------------------------------------------
-  // 7 HAZARD SCORES RENDERING
+  // 6 CORE HAZARD SCORES RENDERING (with trend arrows)
   // --------------------------------------------------------------------------
   renderHazardScores(scores) {
     const hazards = [
-      { key: "flood", prefix: "flood" },
-      { key: "fire", prefix: "fire" },
-      { key: "pollution", prefix: "pollution" },
-      { key: "heat", prefix: "heat" },
-      { key: "landslide", prefix: "landslide" },
-      { key: "industrial", prefix: "industrial" },
-      { key: "water_quality", prefix: "water-quality" }
+      { key: "flood",      prefix: "flood" },
+      { key: "fire",       prefix: "fire" },
+      { key: "pollution",  prefix: "pollution" },
+      { key: "heat",       prefix: "heat" },
+      { key: "landslide",  prefix: "landslide" },
+      { key: "industrial", prefix: "industrial" }
     ];
 
     hazards.forEach(h => {
-      const score = Math.round(scores[`${h.key}_score`] || 0);
-      const sev = scores[`${h.key}_severity`] || "NORMAL";
-      const reasons = scores[`${h.key}_reasons`] || [];
+      const score    = Math.round(scores[`${h.key}_score`] || 0);
+      const sev      = scores[`${h.key}_severity`] || "NORMAL";
+      const reasons  = scores[`${h.key}_reasons`] || [];
+      const prevScore = this.prevHazardScores[h.key] || 0;
+      const delta    = score - prevScore;
 
-      const scoreEl = document.getElementById(`score-${h.prefix}-val`);
-      const badgeEl = document.getElementById(`badge-${h.prefix}`);
-      const fillEl = document.getElementById(`fill-${h.prefix}`);
+      const scoreEl   = document.getElementById(`score-${h.prefix}-val`);
+      const badgeEl   = document.getElementById(`badge-${h.prefix}`);
+      const fillEl    = document.getElementById(`fill-${h.prefix}`);
       const factorsEl = document.getElementById(`factors-${h.prefix}`);
+      const arrowEl   = document.getElementById(`arrow-${h.prefix}`);
+      const cardEl    = document.getElementById(`card-${h.prefix === 'water-quality' ? 'water-quality' : h.prefix}`);
 
       if (scoreEl) scoreEl.textContent = score;
+
+      // Trend arrow
+      if (arrowEl) {
+        if (delta > 2)       { arrowEl.textContent = "↑"; arrowEl.className = "trend-arrow up"; }
+        else if (delta < -2) { arrowEl.textContent = "↓"; arrowEl.className = "trend-arrow down"; }
+        else                 { arrowEl.textContent = "→"; arrowEl.className = "trend-arrow flat"; }
+      }
 
       if (badgeEl) {
         badgeEl.textContent = `[${sev}]`;
@@ -613,6 +689,15 @@ class DashboardApp {
       if (factorsEl) {
         factorsEl.textContent = reasons.length > 0 ? `• ${reasons[0]}` : "• Baseline nominal";
       }
+
+      // Card pulse class
+      if (cardEl) {
+        cardEl.classList.remove("card-warning", "card-critical");
+        if (sev === "CRITICAL") cardEl.classList.add("card-critical");
+        else if (sev === "WARNING") cardEl.classList.add("card-warning");
+      }
+
+      this.prevHazardScores[h.key] = score;
     });
   }
 
@@ -666,12 +751,12 @@ class DashboardApp {
   }
 
   // --------------------------------------------------------------------------
-  // TIME-SERIES CHARTS (SVG Vector Rendering)
+  // TIME-SERIES CHARTS (SVG Vector Rendering) — 60-second window
   // --------------------------------------------------------------------------
   pushChartSample(state) {
-    const norm = state.normalized || {};
+    const norm   = state.normalized || {};
     const scores = state.scores || {};
-    const now = new Date().toLocaleTimeString();
+    const now    = new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
 
     this.chartData.timestamps.push(now);
     this.chartData.water_level.push(norm.water_level_cm || 0);
@@ -682,64 +767,104 @@ class DashboardApp {
     this.chartData.fire_score.push(scores.fire_score || 0);
     this.chartData.industrial_score.push(scores.industrial_score || 0);
 
-    const maxPts = 30;
+    const maxPts = 60; // 60-second ring buffer
     if (this.chartData.timestamps.length > maxPts) {
-      for (const k in this.chartData) {
-        this.chartData[k].shift();
-      }
+      for (const k in this.chartData) this.chartData[k].shift();
     }
 
     this.renderSvgChart("chart-hydro-svg", [
-      { data: this.chartData.water_level, color: "#0284c7", max: 100 },
-      { data: this.chartData.rain_intensity, color: "#06b6d4", max: 100 }
-    ]);
+      { data: this.chartData.water_level,    color: "#0284c7", label: "Water Level (cm)",  max: 100 },
+      { data: this.chartData.rain_intensity, color: "#06b6d4", label: "Rain Intensity (%)", max: 100 }
+    ], null, this.chartData.timestamps);
 
     this.renderSvgChart("chart-gas-svg", [
-      { data: this.chartData.mq2_smoke, color: "#e11d48", max: 100 },
-      { data: this.chartData.temperature, color: "#d97706", max: 70 }
-    ]);
+      { data: this.chartData.mq2_smoke,   color: "#e11d48", label: "MQ-2 Smoke Anomaly (%)", max: 100 },
+      { data: this.chartData.temperature, color: "#d97706", label: "Temperature (°C)",        max: 70 }
+    ], null, this.chartData.timestamps);
 
     this.renderSvgChart("chart-hazard-svg", [
-      { data: this.chartData.flood_score, color: "#0284c7", max: 100 },
-      { data: this.chartData.fire_score, color: "#e11d48", max: 100 },
-      { data: this.chartData.industrial_score, color: "#64748b", max: 100 }
-    ], 75.0); // 75 = critical line
+      { data: this.chartData.flood_score,      color: "#0284c7", label: "Flood Risk",       max: 100 },
+      { data: this.chartData.fire_score,       color: "#e11d48", label: "Fire Risk",        max: 100 },
+      { data: this.chartData.industrial_score, color: "#8b5cf6", label: "Industrial Risk",  max: 100 }
+    ], 75.0, this.chartData.timestamps);
   }
 
-  renderSvgChart(svgId, seriesList, thresholdVal = null) {
+  renderSvgChart(svgId, seriesList, thresholdVal = null, timestamps = []) {
     const svg = document.getElementById(svgId);
     if (!svg) return;
 
-    const w = svg.clientWidth || 380;
-    const h = svg.clientHeight || 85;
-    const pad = 6;
+    const w     = svg.clientWidth  || 400;
+    const h     = svg.clientHeight || 110;
+    const padL  = 34; // left padding for Y-axis labels
+    const padR  = 6;
+    const padT  = 10;
+    const padB  = 18; // bottom padding for X-axis time labels
+    const chartW = w - padL - padR;
+    const chartH = h - padT - padB;
 
-    let svgInner = `<line x1="0" y1="${h-pad}" x2="${w}" y2="${h-pad}" stroke="var(--chart-grid)" stroke-width="1"/>`;
-    svgInner += `<line x1="0" y1="${pad}" x2="${w}" y2="${pad}" stroke="var(--chart-grid)" stroke-dasharray="3,3" stroke-width="1"/>`;
+    let svgInner = "";
 
-    // Draw critical threshold line if specified
+    // Y-axis gridlines & tick labels at 0, 25, 50, 75, 100
+    const yTicks = [0, 25, 50, 75, 100];
+    yTicks.forEach(tick => {
+      const y = padT + chartH - (tick / 100) * chartH;
+      svgInner += `<line x1="${padL}" y1="${y}" x2="${padL + chartW}" y2="${y}" stroke="var(--chart-grid)" stroke-width="${tick === 0 ? 1.5 : 0.8}" stroke-dasharray="${tick === 0 ? '' : '4,3'}"/>`;
+      svgInner += `<text x="${padL - 4}" y="${y + 3.5}" text-anchor="end" font-size="8" fill="var(--text-muted)" font-family="JetBrains Mono, monospace">${tick}</text>`;
+    });
+
+    // Critical threshold line with label
     if (thresholdVal !== null) {
-      const thY = h - pad - ((thresholdVal / 100.0) * (h - (2 * pad)));
-      svgInner += `<line x1="0" y1="${thY}" x2="${w}" y2="${thY}" stroke="#dc2626" stroke-dasharray="4,4" stroke-width="1.5"/>`;
+      const thY = padT + chartH - (thresholdVal / 100) * chartH;
+      svgInner += `<line x1="${padL}" y1="${thY}" x2="${padL + chartW}" y2="${thY}" stroke="#dc2626" stroke-dasharray="5,3" stroke-width="1.5"/>`;
+      svgInner += `<text x="${padL + chartW - 2}" y="${thY - 2}" text-anchor="end" font-size="8" fill="#dc2626" font-weight="700">⚠ CRITICAL</text>`;
     }
 
-    seriesList.forEach(series => {
+    // X-axis time labels (first, middle, last)
+    if (timestamps.length >= 2) {
+      const indices = [0, Math.floor(timestamps.length / 2), timestamps.length - 1];
+      indices.forEach(i => {
+        if (!timestamps[i]) return;
+        const x = padL + (i / Math.max(1, timestamps.length - 1)) * chartW;
+        svgInner += `<text x="${x}" y="${h - 2}" text-anchor="middle" font-size="8" fill="var(--text-muted)" font-family="JetBrains Mono, monospace">${timestamps[i]}</text>`;
+      });
+    }
+
+    // Draw series
+    seriesList.forEach((series, si) => {
       const pts = series.data;
       if (pts.length < 2) return;
 
-      const stepX = (w - (2 * pad)) / Math.max(1, pts.length - 1);
+      const stepX = chartW / Math.max(1, pts.length - 1);
+
+      // Build line path
       let pathD = "";
-
+      let areaD = "";
       pts.forEach((val, idx) => {
-        const x = pad + (idx * stepX);
+        const x    = padL + idx * stepX;
         const normY = Math.max(0, Math.min(series.max, val)) / series.max;
-        const y = h - pad - (normY * (h - (2 * pad)));
-
-        if (idx === 0) pathD += `M ${x} ${y}`;
-        else pathD += ` L ${x} ${y}`;
+        const y    = padT + chartH - normY * chartH;
+        if (idx === 0) { pathD += `M ${x} ${y}`; areaD += `M ${x} ${padT + chartH} L ${x} ${y}`; }
+        else           { pathD += ` L ${x} ${y}`; areaD += ` L ${x} ${y}`; }
       });
+      // Close area
+      const lastX = padL + (pts.length - 1) * stepX;
+      areaD += ` L ${lastX} ${padT + chartH} Z`;
 
+      // Area fill (semi-transparent)
+      svgInner += `<path d="${areaD}" fill="${series.color}" fill-opacity="0.10"/>`;
+      // Main line
       svgInner += `<path d="${pathD}" fill="none" stroke="${series.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+
+      // Current value dot + label at right edge
+      const lastVal  = pts[pts.length - 1];
+      const lastNormY = Math.max(0, Math.min(series.max, lastVal)) / series.max;
+      const dotX     = padL + (pts.length - 1) * stepX;
+      const dotY     = padT + chartH - lastNormY * chartH;
+      svgInner += `<circle cx="${dotX}" cy="${dotY}" r="3.5" fill="${series.color}" stroke="white" stroke-width="1.5"/>`;
+      const labelVal = series.max === 70 ? lastVal.toFixed(1) : Math.round(lastVal);
+      const lx = dotX + 5;
+      const ly = Math.max(padT + 8, Math.min(padT + chartH - 2, dotY + 3.5));
+      svgInner += `<text x="${lx}" y="${ly}" font-size="8" font-weight="700" fill="${series.color}" font-family="JetBrains Mono, monospace">${labelVal}</text>`;
     });
 
     svg.innerHTML = svgInner;
@@ -807,6 +932,76 @@ class DashboardApp {
       const now = new Date();
       el.textContent = now.toTimeString().split(" ")[0] + " LOCAL";
     }
+  }
+
+  // --------------------------------------------------------------------------
+  // DESKTOP NOTIFICATIONS (Windows 10/11 via Web Notifications API)
+  // --------------------------------------------------------------------------
+  _requestNotificationPermission() {
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "granted") {
+      this.desktopNotifEnabled = true;
+    } else if (Notification.permission !== "denied") {
+      Notification.requestPermission().then(perm => {
+        this.desktopNotifEnabled = perm === "granted";
+        if (this.desktopNotifEnabled) {
+          this._showToast("🔔 Desktop notifications enabled for critical alerts.", "success");
+        }
+      });
+    }
+  }
+
+  _fireDesktopNotification(alert) {
+    if (!this.alarmActive) return;
+    const key     = `${alert.node_id}-${alert.hazard_type}`;
+    const now     = Date.now();
+    const cooldown = 60000; // 60-second cooldown per alert type per node
+    if (this.notificationCooldowns[key] && now - this.notificationCooldowns[key] < cooldown) return;
+    this.notificationCooldowns[key] = now;
+
+    const body = `${alert.node_id} — Score: ${Math.round(alert.score)}/100\n${(alert.reasons || [])[0] || ""}`;
+    const icon = alert.hazard_type === "FLOOD" ? "🌊" :
+                 alert.hazard_type === "FIRE"  ? "🔥" :
+                 alert.hazard_type === "INDUSTRIAL" ? "🏭" : "⚠️";
+
+    if (this.desktopNotifEnabled) {
+      try {
+        new Notification(`${icon} EIN CRITICAL ALERT — ${alert.hazard_type}`, {
+          body: body,
+          icon: null,
+          requireInteraction: false,
+          silent: false
+        });
+      } catch (e) { /* fallback to in-app toast */ }
+    }
+    // Always show in-app toast for control room visibility
+    this._showToast(`${icon} <strong>${alert.hazard_type} CRITICAL</strong> — ${alert.node_id} (${Math.round(alert.score)}/100)`, "danger");
+  }
+
+  _ensureToastContainer() {
+    if (document.getElementById("toast-container")) return;
+    const c = document.createElement("div");
+    c.id = "toast-container";
+    c.style.cssText = "position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;";
+    document.body.appendChild(c);
+  }
+
+  _showToast(html, type = "info") {
+    const container = document.getElementById("toast-container");
+    if (!container) return;
+
+    const colors = { danger: "#dc2626", warn: "#ea580c", success: "#16a34a", info: "#0284c7" };
+    const bg     = colors[type] || colors.info;
+
+    const toast = document.createElement("div");
+    toast.style.cssText = `background:${bg};color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;font-family:Inter,sans-serif;font-weight:500;max-width:320px;box-shadow:0 4px 20px rgba(0,0,0,0.3);pointer-events:auto;opacity:1;transition:opacity 0.4s;`;
+    toast.innerHTML = html;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.opacity = "0";
+      setTimeout(() => toast.remove(), 450);
+    }, 5000);
   }
 }
 

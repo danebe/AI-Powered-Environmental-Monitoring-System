@@ -66,6 +66,15 @@ class ChannelAnomalyTracker:
             "consecutive":          self.consecutive_anomalies,
         }
 
+    def reset(self, val: float) -> None:
+        """Snap EMA and history to a known baseline value (e.g. on scenario NORMAL reset)."""
+        self.ema = val
+        self.prev_val = val
+        self.initialized = True
+        self.consecutive_anomalies = 0
+        self.history.clear()
+        self.history.append(val)
+
 
 class NodeAnomalyDetector:
     """
@@ -100,3 +109,19 @@ class NodeAnomalyDetector:
             "water_ph":        self.channels["water_ph"]       .update(norm_data["water_ph"],             timestamp),
             "water_turbidity": self.channels["water_turbidity"].update(norm_data["water_turbidity_ntu"],  timestamp),
         }
+
+    def reset_to_baseline(self, temp: float = 30.0, water: float = 12.0,
+                          mq2: float = 0.0, mq7: float = 0.0,
+                          gas_res: float = 120000.0, rain: float = 0.0,
+                          soil: float = 35.0, vib: float = 0.0) -> None:
+        """Snap all channel EMAs/history to baseline values on NORMAL reset."""
+        self.channels["temperature"]    .reset(temp)
+        self.channels["water_level"]    .reset(water)
+        self.channels["mq2_smoke"]      .reset(mq2)
+        self.channels["mq7_co"]         .reset(mq7)
+        self.channels["gas_res"]        .reset(gas_res)
+        self.channels["rain"]           .reset(rain)
+        self.channels["soil_moisture"]  .reset(soil)
+        self.channels["vibration"]      .reset(vib)
+        self.channels["water_ph"]       .reset(7.0)
+        self.channels["water_turbidity"].reset(0.0)
