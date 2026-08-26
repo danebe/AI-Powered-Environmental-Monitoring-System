@@ -145,6 +145,7 @@ class EnvironmentalServerEngine:
 
         # Latest state per node
         self.latest_states: Dict[str, Dict[str, Any]] = {}
+        self.last_hardware_ingest_time: Dict[str, float] = {}
         self.simulation_running = True
 
         # Pre-seed initial state
@@ -157,15 +158,17 @@ class EnvironmentalServerEngine:
     def _preseed_initial_state(self):
         for node_id in ["NODE_001", "NODE_002", "NODE_003", "NODE_004"]:
             pkt = self.simulator.generate_next_packet(node_id)
-            self.ingest_telemetry(pkt)
+            self.ingest_telemetry(pkt, is_hardware=False)
 
     def _simulation_loop(self):
         while self.simulation_running:
             try:
                 for node_id in ["NODE_001", "NODE_002", "NODE_003", "NODE_004"]:
-                    # If real hardware reader is currently feeding this node, let hardware take priority
+                    # If real hardware (USB Serial COM port, Web Serial, or WiFi) is active on this node, yield priority
+                    if (time.time() - self.last_hardware_ingest_time.get(node_id, 0.0)) < 6.0:
+                        continue
                     if self.serial_reader.connected and self.serial_reader.port and node_id == "NODE_001":
-                        if time.time() - self.serial_reader.last_packet_time < 5.0:
+                        if time.time() - self.serial_reader.last_packet_time < 6.0:
                             continue
 
                     if self.simulator.active_scenario == "NODE_OFFLINE" and node_id == self.simulator.target_node_id:
@@ -174,14 +177,16 @@ class EnvironmentalServerEngine:
                         continue
 
                     pkt = self.simulator.generate_next_packet(node_id)
-                    self.ingest_telemetry(pkt)
+                    self.ingest_telemetry(pkt, is_hardware=False)
 
                 time.sleep(1.0)
             except Exception:
                 time.sleep(1.0)
 
-    def ingest_telemetry(self, payload: TelemetryPayload) -> Dict[str, Any]:
+    def ingest_telemetry(self, payload: TelemetryPayload, is_hardware: bool = False) -> Dict[str, Any]:
         node_id = payload.node_id
+        if is_hardware:
+            self.last_hardware_ingest_time[node_id] = time.time()
 
         # 1. Normalization & Sanity Validation
         norm_data = SensorNormalizer.sanitize_and_normalize(payload)
@@ -489,7 +494,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     local_scores=req_data.get("local_scores", None)
                 )
 
-                res = self.engine.ingest_telemetry(payload)
+                res = self.engine.ingest_telemetry(payload, is_hardware=True)
                 self._set_json_headers(200)
                 self.wfile.write(json.dumps({"status": "success", "processed": res}).encode("utf-8"))
             except Exception as e:
