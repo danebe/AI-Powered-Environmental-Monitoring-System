@@ -141,7 +141,7 @@ class SerialHardwareReader:
                             local_scores=data.get("local_scores", None)
                         )
 
-                        self.engine.ingest_telemetry(payload)
+                        self.engine.ingest_telemetry(payload, is_hardware=True)
                         self.packets_ingested += 1
                         self.last_packet_time = time.time()
                     except Exception as parse_err:

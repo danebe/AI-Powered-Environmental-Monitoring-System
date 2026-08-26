@@ -152,11 +152,14 @@ bool TelemetryNetwork::transmitJson(const TelemetryPacket& p) {
         p.scores.water_quality_score
     );
 
+    // Also output newline-delimited JSON over USB Serial (for COM port / Web Serial dashboard link)
+    Serial.println(buf);
+
     int code = http.POST(buf);
     http.end();
 
     if (code == 200 || code == 201) return true;
-    Serial.printf("[HTTP] POST failed: %d\n", code);
+    Serial.printf("[HTTP] POST status: %d\n", code);
     return false;
 }
 

@@ -15,4 +15,5 @@ private:
     void drawCriticalScreen(const SensorReadings& r, const HazardScores& scores);
 
     uint32_t _last_render_ms;
+    bool _initialized;
 };

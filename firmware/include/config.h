@@ -19,12 +19,18 @@
 // GPIO Pin Mapping
 // ----------------------------------------------------------------------------
 
-// I2C Bus  (BME680 + SSD1306 OLED share the same bus)
+// I2C Bus  (BME680 + OLED share the same bus)
 #define PIN_I2C_SDA          21
 #define PIN_I2C_SCL          22
 #define OLED_I2C_ADDRESS     0x3C
 #define OLED_SCREEN_WIDTH    128
 #define OLED_SCREEN_HEIGHT   64
+
+// Display Driver Selection:
+// Set to 1 for 1.3" I2C OLED (SH1106 / SH1106G controller - standard for 1.3")
+// Set to 0 for 0.96" I2C OLED (SSD1306 controller - standard for 0.96")
+#define USE_SH1106_1_3_INCH  1
+
 #define BME680_I2C_ADDRESS   0x77   // Primary address (try 0x76 if 0x77 fails)
 
 // DHT22 auxiliary temperature/humidity
