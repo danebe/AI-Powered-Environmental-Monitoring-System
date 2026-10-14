@@ -1,3 +1,5 @@
+# This is a work in progress
+
 # Environmental Intelligence Network (EIN)
 
 A low-cost, resilient, distributed edge AI environmental monitoring and multi-hazard early warning network for detecting **rising water & flash flooding, wildfires, hazardous air pollution, extreme heat conditions, landslide precursors, industrial emissions, and water quality degradation**.
